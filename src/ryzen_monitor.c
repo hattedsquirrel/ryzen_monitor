@@ -1,6 +1,6 @@
 /**
  * Ryzen SMU Userspace Sensor Monitor
- * Copyright (C) 2020
+ * Copyright (C) 2020-2021
  *    Florian Huehn <hattedsquirrel@gmail.com> (https://hattedsquirrel.net)
  *    Leonardo Gates <leogatesx9r@protonmail.com>
  *
@@ -35,213 +35,12 @@
 #include <sys/types.h>
 
 #include <libsmu.h>
+#include "pm_tables.h"
 
-#define PROGRAM_VERSION                 "1.0"
+#define PROGRAM_VERSION "1.0.1"
 
 #define READ_SMN_V1(offs) { if (smu_read_smn_addr(&obj, offs + offset, &value1) != SMU_Return_OK) goto _READ_ERROR; }
 #define READ_SMN_V2(offs) { if (smu_read_smn_addr(&obj, offs + offset, &value2) != SMU_Return_OK) goto _READ_ERROR; }
-
-// Ryzen 5900X
-#define PM_TABLE_VERSION 0x380804
-#define PM_TABLE_MAX_CORES 16
-#define PM_TABLE_ZEN_VERSION 3
-/* Legend for notes in comments:
- * o = ok. I'm confident this is the right value.
- * s = static. Does not change unter load.
- * z = always zero
- * c = changes under load. Don't know if the value is correct.
- */
-typedef struct {
-    float PPT_LIMIT; //o
-    float PPT_VALUE; //o
-    float TDC_LIMIT; //o
-    float TDC_VALUE; //o
-    float THM_LIMIT; //o
-    float THM_VALUE; //o
-    float FIT_LIMIT; //o
-    float FIT_VALUE; //o
-    float EDC_LIMIT; //o
-    float EDC_VALUE; //o
-    float VID_LIMIT; //o
-    float VID_VALUE; //o
-    float PPT_WC;
-    float PPT_ACTUAL; //o
-    float TDC_WC;
-    float TDC_ACTUAL; //o
-    float THM_WC;
-    float THM_ACTUAL; //o
-    float FIT_WC;
-    float FIT_ACTUAL; //o
-    float EDC_WC;
-    float EDC_ACTUAL; //o
-    float VID_WC;
-    float VID_ACTUAL; //o
-    float VDDCR_CPU_POWER; //o
-    float VDDCR_SOC_POWER; //o
-    float VDDIO_MEM_POWER; //o
-    float VDD18_POWER; //o
-    float ROC_POWER; //s
-    float SOCKET_POWER; //o
-    float PPT_FREQUENCY;
-    float TDC_FREQUENCY;
-    float THM_FREQUENCY;
-    float PROCHOT_FREQUENCY;
-    float VOLTAGE_FREQUENCY;
-    float CCA_FREQUENCY;
-    float FIT_VOLTAGE;
-    float FIT_PRE_VOLTAGE;
-    float LATCHUP_VOLTAGE;
-    float CPU_SET_VOLTAGE; //os
-    float CPU_TELEMETRY_VOLTAGE;
-    float CPU_TELEMETRY_VOLTAGE2; 
-    float CPU_TELEMETRY_CURRENT; //o
-    float CPU_TELEMETRY_POWER; //o
-    float SOC_SET_VOLTAGE; //os
-    float SOC_TELEMETRY_VOLTAGE; //o
-    float SOC_TELEMETRY_CURRENT; //o
-    float SOC_TELEMETRY_POWER; //o
-    float FCLK_FREQ; //o
-    float FCLK_FREQ_EFF; //o
-    float UCLK_FREQ; //o
-    float MEMCLK_FREQ; //o
-    float FCLK_DRAM_SETPOINT;
-    float FCLK_DRAM_BUSY;
-    float FCLK_GMI_SETPOINT;
-    float FCLK_GMI_BUSY;
-    float FCLK_IOHC_SETPOINT;
-    float FCLK_IOHC_BUSY;
-    float FCLK_XGMI_SETPOINT;
-    float FCLK_XGMI_BUSY;
-    float CCM_READS;
-    float CCM_WRITES;
-    float IOMS;
-    float XGMI;
-    float CS_UMC_READS;
-    float CS_UMC_WRITES;
-    float unk0108[4];
-    float FCLK_RESIDENCY[4];
-    float FCLK_FREQ_TABLE[4];
-    float UCLK_FREQ_TABLE[4];
-    float MEMCLK_FREQ_TABLE[4];
-    float FCLK_VOLTAGE[4];
-    float LCLK_SETPOINT_0;
-    float LCLK_BUSY_0;
-    float LCLK_unk1_0;
-    float LCLK_unk2_0;
-    float LCLK_FREQ_0;
-    float LCLK_FREQ_EFF_0;
-    float LCLK_MAX_DPM_0;
-    float LCLK_MIN_DPM_0;
-    float LCLK_SETPOINT_1;
-    float LCLK_BUSY_1;
-    float LCLK_unk1_1;
-    float LCLK_unk2_1;
-    float LCLK_FREQ_1;
-    float LCLK_FREQ_EFF_1;
-    float LCLK_MAX_DPM_1;
-    float LCLK_MIN_DPM_1;
-    float LCLK_SETPOINT_2;
-    float LCLK_BUSY_2;
-    float LCLK_unk1_2;
-    float LCLK_unk2_2;
-    float LCLK_FREQ_2;
-    float LCLK_FREQ_EFF_2;
-    float LCLK_MAX_DPM_2;
-    float LCLK_MIN_DPM_2;
-    float LCLK_SETPOINT_3;
-    float LCLK_BUSY_3;
-    float LCLK_unk1_3;
-    float LCLK_unk2_3;
-    float LCLK_FREQ_3;
-    float LCLK_FREQ_EFF_3;
-    float LCLK_MAX_DPM_3;
-    float LCLK_MIN_DPM_3;
-    float XGMI_SETPOINT;
-    float XGMI_BUSY;
-    float XGMI_LANE_WIDTH;
-    float XGMI_DATA_RATE;
-    float SOC_POWER; //x
-    float SOC_TEMP; //o?
-    float DDR_VDDP_POWER;
-    float DDR_VDDIO_MEM_POWER;
-    float GMI2_VDDG_POWER;
-    float IO_VDDCR_SOC_POWER;
-    float IOD_VDDIO_MEM_POWER;
-    float IO_VDD18_POWER; 
-    float TDP;
-    float DETERMINISM;
-    float V_VDDM;
-    float V_VDDP;
-    float V_VDDG;
-    float V_unk1;
-    float PEAK_TEMP; //o
-    float PEAK_VOLTAGE; //o
-    float unk_power; //maybe power?
-    float AVG_CORE_COUNT;
-    float CCLK_LIMIT; //o GHz
-    float MAX_VOLTAGE; //o
-    float DC_BTC;
-    float package_power; //?
-    float unk_0250;
-    float unk_0254;
-    float CSTATE_BOOST;
-    float PROCHOT;
-    float PC6;
-    float PWM;
-    float unk_0268;
-    float clk_026c;
-    float clk_0270;
-    float SOCCLK;
-    float SHUBCLK;
-    float MP0CLK;
-    float MP1CLK;
-    float MP5CLK;
-    float SMNCLK;
-    float TWIXCLK;
-    float clk_0290;
-    float WAFLCLK; //0 in https://chart-studio.plotly.com/~brettdram/16/
-    float DPM_BUSY;
-    float MP1_BUSY;
-    float MP5_BUSY;
-    float CORE_POWER[16]; //0x02A4-0x02E0 //o
-    float CORE_VOLTAGE[16]; //0x02E4-0x0320 //o
-    float CORE_TEMP[16]; //0x0324-0x0360 //o
-    float CORE_FIT[16]; //0x0364-0x03A0 //o
-    float CORE_IDDMAX[16]; //0x03A4-0x03E0 //o
-    float CORE_FREQ[16]; //0x03E4-0x0420 //o
-    float CORE_FREQEFF[16]; //0x0424-0x0460
-    float CORE_C0[16]; //0x0464-0x04A0 //o
-    float CORE_CC1[16]; //0x04A4-0x04E0 //o
-    float CORE_CC6[16]; //0x04E4-0x0520 //o
-    float CORE_CKS_FDD[16]; //0x0524-0x0560
-    float CORE_CI_FDD[16]; //0x0564-0x05A0
-    float CORE_IRM[16]; //0x05A4-0x05E0
-    float CORE_PSTATE[16]; //0x05E4-0x0620 //o
-    float CORE_FREQ_LIM_MAX[16]; //0x0624-0x0660 //o(s)
-    float CORE_FREQ_LIM_MIN[16]; //0x0664-0x06A0 //o(s)
-    float CORE_CPPC_MAX[16]; //0x06A4-0x06A4 //c
-    float CORE_CPPC_MIN[16]; //0x06E4-0x0720 //c
-    float unk_0724[16]; //0x0724-0x0760 //zs
-    float CORE_SC_LIMIT[16]; //0x0764-0x07A0 //c
-    float CORE_SC_CAC[16]; //0x07A4-0x07E0 //c
-    float CORE_SC_RESIDENCY[16]; //0x07E4-0x0820 //c
-    float L3_LOGIC_POWER[2]; //o 3W
-    float L3_VDDM_POWER[2]; //o 0.5W
-    float L3_TEMP[2]; //o
-    float L3_FIT[2]; //o
-    float L3_IDDMAX[2]; //o 28A
-    float L3_FREQ[2]; //o
-    float L3_CKS_FDD[2]; //c
-    float L3_CCA_THRESHOLD[2]; //c
-    float L3_CCA_CAC[2]; //s 2048
-    float L3_CCA_ACTIVATION[2]; //c
-    float L3_EDC_LIMIT[2]; //z
-    float L3_EDC_CAC[2]; //c
-    float L3_EDC_RESIDENCY[2]; //c
-    //[2] //z
-    //[2] //(s)(1)
-    //[2] //c 21->31
-} pm_table_0x380804, *ppm_table_0x380804;
 
 static smu_obj_t obj;
 static int update_time_s = 1;
@@ -467,62 +266,67 @@ void print_line(const char* label, const char* value_format, ...) {
     fprintf(stdout, "│ %45s │ %46s │\n", label, buffer);
 }
 
+//Helper to access the PM Table elements. If an element doesn't exist in the
+//current PM Table version, it's pointer is set to 0. This helper returns
+//NAN for not available fields.
+#define pmta(elem) ((pmt.elem)?(*pmt.elem):NAN)
+
 void start_pm_monitor(int force) {
     float core_voltage, core_frequency, package_sleep_time, core_sleep_time, edc_value, average_voltage;
-    float peak_core_frequency, peak_core_temp, peak_core_voltage,
-          total_core_voltage, total_core_power, total_usage, total_core_CC6;
-
+    float peak_core_frequency, peak_core_temp, peak_core_voltage;
+    float total_core_voltage, total_core_power, total_usage, total_core_CC6;
     const char* name, *codename, *smu_fw_ver;
-    unsigned int max_cores, zen_version;
-    unsigned int cores, ccds, ccxs, cores_per_ccx, core_disable_map;
+    unsigned int cores, ccds, ccxs, cores_per_ccx, core_disable_map, enabled_cores_count=0;
     unsigned int if_ver, i;
     int core_disabled, core_renumber;
-    ppm_table_0x380804 pmt;
     unsigned char *pm_buf;
-    int enabled_cores_count=0;
+    pm_table pmt;
 
     if (!smu_pm_tables_supported(&obj)) {
         fprintf(stderr, "PM Tables are not supported on this platform.\n");
         exit(0);
     }
 
-    //Ok, ideally we should support multiple table version. I just don't yet know how.
-    if (!force && obj.pm_table_version != PM_TABLE_VERSION) {
-        fprintf(stderr, "PM Table version is not currently suppported. Run with \"-pf\" flag to ignore this.\n");
+    pm_buf = calloc(obj.pm_table_size, sizeof(unsigned char));
+    if (!pm_buf) {
+        fprintf(stderr, "Could not allocate memory for the PM Table.\n");
         exit(0);
     }
-    max_cores = PM_TABLE_MAX_CORES;
-    zen_version = PM_TABLE_ZEN_VERSION;
-    enabled_cores_count = max_cores; //Just to be safe. Will be overwritten by get_processor_topology().
+
+    //Initialize pmt to 0. This also sets all pointers to 0, which signifies non-existiting fields.
+    //Access via pmta(...) will check if pointer is 0 before trying to access the value.
+    memset(&pmt, 0, sizeof(pmt));
+
+    //Select matching PM Table
+    //ToDo: implement "force" table version
+    switch(obj.pm_table_version) {
+        case 0x380804: pm_table_0x380804(&pmt, pm_buf); break;
+        default:
+            fprintf(stderr, "This PM Table version is currently not supported.\n");
+            exit(0);
+            break;
+    }
+    //Prevent illegal memory access
+    if (obj.pm_table_size < pmt.min_size) {
+        fprintf(stderr, "Selected PM Table is larger than the PM Table returned by the SMU.\n");
+        exit(0);
+    }
+    //Maximum core count. Just to be safe. Will be overwritten by get_processor_topology(...).
+    enabled_cores_count = pmt.max_cores;
 
     name        = get_processor_name();
     codename    = smu_codename_to_str(&obj);
     smu_fw_ver  = smu_get_fw_version(&obj);
 
-    get_processor_topology(&ccds, &ccxs, &cores_per_ccx, &cores, &core_disable_map, &enabled_cores_count, zen_version);
-
-    pm_buf = calloc(obj.pm_table_size, sizeof(unsigned char));
-    pmt = (ppm_table_0x380804)pm_buf;
+    get_processor_topology(&ccds, &ccxs, &cores_per_ccx, &cores, &core_disable_map, &enabled_cores_count, pmt.zen_version);
 
     switch (obj.smu_if_version) {
-        case IF_VERSION_9:
-            if_ver = 9;
-            break;
-        case IF_VERSION_10:
-            if_ver = 10;
-            break;
-        case IF_VERSION_11:
-            if_ver = 11;
-            break;
-        case IF_VERSION_12:
-            if_ver = 12;
-            break;
-        case IF_VERSION_13:
-            if_ver = 13;
-            break;
-        default:
-            if_ver = 0;
-            break;
+        case IF_VERSION_9:  if_ver =  9; break;
+        case IF_VERSION_10: if_ver = 10; break;
+        case IF_VERSION_11: if_ver = 11; break;
+        case IF_VERSION_12: if_ver = 12; break;
+        case IF_VERSION_13: if_ver = 13; break;
+        default:            if_ver =  0; break;
     }
 
     while(1) {
@@ -536,7 +340,7 @@ void start_pm_monitor(int force) {
         print_line("Processor Code Name", codename);
         print_line("Cores", "%d", cores);
         print_line("Core CCDs", "%d", ccds);
-        if (zen_version!=3) {
+        if (pmt.zen_version!=3) {
             print_line("Core CCXs", "%d", ccxs);
             print_line("Cores Per CCX", "%d", cores_per_ccx);
         }
@@ -551,17 +355,17 @@ void start_pm_monitor(int force) {
         total_core_voltage = total_core_power = total_usage = total_core_CC6 = 0;
         core_renumber = 0;
 
-        package_sleep_time = pmt->PC6 / 100.f;
-        average_voltage = (pmt->CPU_TELEMETRY_VOLTAGE - (0.2 * package_sleep_time)) / (1.0 - package_sleep_time);
+        package_sleep_time = pmta(PC6) / 100.f;
+        average_voltage = (pmta(CPU_TELEMETRY_VOLTAGE) - (0.2 * package_sleep_time)) / (1.0 - package_sleep_time);
 
         fprintf(stdout, "╭─────────┬────────────┬──────────┬─────────┬──────────┬─────────────┬─────────────┬─────────────╮\n");
-        for (i = 0; i < max_cores; i++) {
+        for (i = 0; i < pmt.max_cores; i++) {
             core_disabled = (core_disable_map >> i)&0x01;
-            core_frequency = pmt->CORE_FREQEFF[i] * 1000.f;
+            core_frequency = pmta(CORE_FREQEFF[i]) * 1000.f;
 
             // "Real core frequency" -- excluding gating
-            if (pmt->CORE_FREQ[i] != 0.f) {
-                core_sleep_time = pmt->CORE_CC6[i] / 100.f;
+            if (pmta(CORE_FREQ[i]) != 0.f) {
+                core_sleep_time = pmta(CORE_CC6[i]) / 100.f;
                 core_voltage = ((1.0 - core_sleep_time) * average_voltage) + (0.2 * core_sleep_time);
             }
 
@@ -570,39 +374,39 @@ void start_pm_monitor(int force) {
                       fprintf(stdout,
                           "│ %*s %d │   Disabled | %6.3f W | %5.3f V | %6.2f C | C0: %5.1f %% | C1: %5.1f %% | C6: %5.1f %% │\n",
                         (i<10)+4, "Core", i,
-                           pmt->CORE_POWER[i], core_voltage, pmt->CORE_TEMP[i],
-                           pmt->CORE_C0[i], pmt->CORE_CC1[i], pmt->CORE_CC6[i]);
+                           pmta(CORE_POWER[i]), core_voltage, pmta(CORE_TEMP[i]),
+                           pmta(CORE_C0[i]), pmta(CORE_CC1[i]), pmta(CORE_CC6[i]));
             }
-            else if (pmt->CORE_C0[i] >= 6.f) {
+            else if (pmta(CORE_C0[i]) >= 6.f) {
                 // AMD denotes a sleeping core as having spent less than 6% of the time in C0.
                 // Source: Ryzen Master
                    fprintf(stdout,
                        "│ %*s %d │   %4.f MHz | %6.3f W | %5.3f V | %6.2f C | C0: %5.1f %% | C1: %5.1f %% | C6: %5.1f %% │\n",
                     (core_renumber<10)+4, "Core", core_renumber,
-                    core_frequency, pmt->CORE_POWER[i], core_voltage, pmt->CORE_TEMP[i],
-                       pmt->CORE_C0[i], pmt->CORE_CC1[i], pmt->CORE_CC6[i]);
+                    core_frequency, pmta(CORE_POWER[i]), core_voltage, pmta(CORE_TEMP[i]),
+                       pmta(CORE_C0[i]), pmta(CORE_CC1[i]), pmta(CORE_CC6[i]));
                }
                else {
                    fprintf(stdout,
                        "│ %*s %d │   Sleeping | %6.3f W | %5.3f V | %6.2f C | C0: %5.1f %% | C1: %5.1f %% | C6: %5.1f %% │\n",
                     (core_renumber<10)+4, "Core", core_renumber,
-                       pmt->CORE_POWER[i], core_voltage, pmt->CORE_TEMP[i],
-                       pmt->CORE_C0[i], pmt->CORE_CC1[i], pmt->CORE_CC6[i]);
+                       pmta(CORE_POWER[i]), core_voltage, pmta(CORE_TEMP[i]),
+                       pmta(CORE_C0[i]), pmta(CORE_CC1[i]), pmta(CORE_CC6[i]));
             }
 
-            //Don't confuse people by numbering cores that are disabled and hence n't shown on 6 / 12 core CPUs
-            //(which actually have 8 / 16 cores)
+            //Don't confuse people by numbering cores that are disabled and hence not shown on 6 | 12 core CPUs
+            //(which actually have 8 | 16 cores)
             if (show_disabled_cores || !core_disabled) core_renumber++;
 
             //Statistics
             if (!core_disabled) {
                 if (peak_core_frequency < core_frequency) peak_core_frequency = core_frequency;
-                if (peak_core_temp < pmt->CORE_TEMP[i]) peak_core_temp = pmt->CORE_TEMP[i];
+                if (peak_core_temp < pmta(CORE_TEMP[i])) peak_core_temp = pmta(CORE_TEMP[i]);
                 if (peak_core_voltage < core_voltage) peak_core_voltage = core_voltage;
                 total_core_voltage += core_voltage;
-                total_core_power += pmt->CORE_POWER[i];
-                total_usage += pmt->CORE_C0[i];
-                total_core_CC6 += pmt->CORE_CC6[i];
+                total_core_power += pmta(CORE_POWER[i]);
+                total_usage += pmta(CORE_C0[i]);
+                total_core_CC6 += pmta(CORE_CC6[i]);
             }
         }
 
@@ -617,75 +421,75 @@ void start_pm_monitor(int force) {
         print_line("Total Core Power Sum", "%7.4f W", total_core_power);
 
         fprintf(stdout, "├── Reported by SMU ────────────────────────────┼────────────────────────────────────────────────┤\n");
-        //print_line("Package Power", "%8.3f W", pmt->SOCKET_POWER); //Is listed below in power section
-        print_line("Peak Core Voltage", "%5.3f V", pmt->CPU_TELEMETRY_VOLTAGE);
-        print_line("Package CC6", "%6.2f %%", pmt->PC6);
+        //print_line("Package Power", "%8.3f W", pmta(SOCKET_POWER)); //Is listed below in power section
+        print_line("Peak Core Voltage", "%5.3f V", pmta(CPU_TELEMETRY_VOLTAGE));
+        print_line("Package CC6", "%6.2f %%", pmta(PC6));
         fprintf(stdout, "╰───────────────────────────────────────────────┴────────────────────────────────────────────────╯\n");
 
         fprintf(stdout, "╭── Electrical & Thermal Constraints ───────────┬────────────────────────────────────────────────╮\n");
-        edc_value = pmt->EDC_VALUE * (total_usage / cores / 100);
-        if (edc_value < pmt->TDC_VALUE) edc_value = pmt->TDC_VALUE;
+        edc_value = pmta(EDC_VALUE) * (total_usage / cores / 100);
+        if (edc_value < pmta(TDC_VALUE)) edc_value = pmta(TDC_VALUE);
 
-        print_line("Peak Temperature", "%8.2f C", pmt->PEAK_TEMP);
-        print_line("SoC Temperature", "%8.2f C", pmt->SOC_TEMP);
-        //print_line("Core Power", "%8.4f W", pmt->VDDCR_CPU_POWER);
+        print_line("Peak Temperature", "%8.2f C", pmta(PEAK_TEMP));
+        print_line("SoC Temperature", "%8.2f C", pmta(SOC_TEMP));
+        //print_line("Core Power", "%8.4f W", pmta(VDDCR_CPU_POWER));
 
-        print_line("Voltage from Core VRM", "%7.3f V | %7.3f V | %8.2f %%", pmt->VID_VALUE, pmt->VID_LIMIT, (pmt->VID_VALUE / pmt->VID_LIMIT * 100));
-        print_line("PPT", "%7.3f W | %7.f W | %8.2f %%", pmt->PPT_VALUE, pmt->PPT_LIMIT, (pmt->PPT_VALUE / pmt->PPT_LIMIT * 100));
-        print_line("TDC Value", "%7.3f A | %7.f A | %8.2f %%", pmt->TDC_VALUE, pmt->TDC_LIMIT, (pmt->TDC_VALUE / pmt->TDC_LIMIT * 100));
-        print_line("TDC Actual", "%7.3f A | %7.f A | %8.2f %%", pmt->TDC_ACTUAL, pmt->TDC_LIMIT, (pmt->TDC_ACTUAL / pmt->TDC_LIMIT * 100));
-        print_line("EDC", "%7.3f A | %7.f A | %8.2f %%", edc_value, pmt->EDC_LIMIT, (edc_value / pmt->EDC_LIMIT * 100));
-        print_line("THM", "%7.2f C | %7.f C | %8.2f %%", pmt->THM_VALUE, pmt->THM_LIMIT, (pmt->THM_VALUE / pmt->THM_LIMIT * 100));
-        print_line("FIT", "%7.f   | %7.f   | %8.2f %%", pmt->FIT_VALUE, pmt->FIT_LIMIT, (pmt->FIT_VALUE / pmt->FIT_LIMIT) * 100.f);
+        print_line("Voltage from Core VRM", "%7.3f V | %7.3f V | %8.2f %%", pmta(VID_VALUE), pmta(VID_LIMIT), (pmta(VID_VALUE) / pmta(VID_LIMIT) * 100));
+        print_line("PPT", "%7.3f W | %7.f W | %8.2f %%", pmta(PPT_VALUE), pmta(PPT_LIMIT), (pmta(PPT_VALUE) / pmta(PPT_LIMIT) * 100));
+        print_line("TDC Value", "%7.3f A | %7.f A | %8.2f %%", pmta(TDC_VALUE), pmta(TDC_LIMIT), (pmta(TDC_VALUE) / pmta(TDC_LIMIT) * 100));
+        print_line("TDC Actual", "%7.3f A | %7.f A | %8.2f %%", pmta(TDC_ACTUAL), pmta(TDC_LIMIT), (pmta(TDC_ACTUAL) / pmta(TDC_LIMIT) * 100));
+        print_line("EDC", "%7.3f A | %7.f A | %8.2f %%", edc_value, pmta(EDC_LIMIT), (edc_value / pmta(EDC_LIMIT) * 100));
+        print_line("THM", "%7.2f C | %7.f C | %8.2f %%", pmta(THM_VALUE), pmta(THM_LIMIT), (pmta(THM_VALUE) / pmta(THM_LIMIT) * 100));
+        print_line("FIT", "%7.f   | %7.f   | %8.2f %%", pmta(FIT_VALUE), pmta(FIT_LIMIT), (pmta(FIT_VALUE) / pmta(FIT_LIMIT)) * 100.f);
         fprintf(stdout, "╰───────────────────────────────────────────────┴────────────────────────────────────────────────╯\n");
 
         fprintf(stdout, "╭── Memory Interface ───────────────────────────┬────────────────────────────────────────────────╮\n");
-        print_line("Coupled Mode", "%8s", pmt->UCLK_FREQ == pmt->MEMCLK_FREQ ? "ON" : "OFF");
-        print_line("Fabric Clock (Average)", "%5.f MHz", pmt->FCLK_FREQ_EFF);
-        print_line("Fabric Clock", "%5.f MHz", pmt->FCLK_FREQ);
-        print_line("Uncore Clock", "%5.f MHz", pmt->UCLK_FREQ);
-        print_line("Memory Clock", "%5.f MHz", pmt->MEMCLK_FREQ);
-        //print_line("VDDCR_Mem", "%7.4f W", pmt->VDDIO_MEM_POWER); //Is listed below in power section
-        //print_line("VDDCR_SoC", "%7.4f V", pmt->SOC_SET_VOLTAGE); //Might be the default voltage, not the actually set one
-        print_line("cLDO_VDDM", "%7.4f V", pmt->V_VDDM);
-        print_line("cLDO_VDDP", "%7.4f V", pmt->V_VDDP);
-        print_line("cLDO_VDDG", "%7.4f V", pmt->V_VDDG);
+        print_line("Coupled Mode", "%8s", pmta(UCLK_FREQ) == pmta(MEMCLK_FREQ) ? "ON" : "OFF");
+        print_line("Fabric Clock (Average)", "%5.f MHz", pmta(FCLK_FREQ_EFF));
+        print_line("Fabric Clock", "%5.f MHz", pmta(FCLK_FREQ));
+        print_line("Uncore Clock", "%5.f MHz", pmta(UCLK_FREQ));
+        print_line("Memory Clock", "%5.f MHz", pmta(MEMCLK_FREQ));
+        //print_line("VDDCR_Mem", "%7.4f W", pmta(VDDIO_MEM_POWER)); //Is listed below in power section
+        //print_line("VDDCR_SoC", "%7.4f V", pmta(SOC_SET_VOLTAGE)); //Might be the default voltage, not the actually set one
+        print_line("cLDO_VDDM", "%7.4f V", pmta(V_VDDM));
+        print_line("cLDO_VDDP", "%7.4f V", pmta(V_VDDP));
+        print_line("cLDO_VDDG", "%7.4f V", pmta(V_VDDG));
         fprintf(stdout, "╰───────────────────────────────────────────────┴────────────────────────────────────────────────╯\n");
 
         fprintf(stdout, "╭── Power Consumption ──────────────────────────┬────────────────────────────────────────────────╮\n");
         //These powers are drawn via VDDCR_SOC and VDDCR_CPU and thus are pulled from the CPU power connector of the mainboard
         print_line("Total Core Power Sum", "%7.4f W", total_core_power);
-        //print_line("VDDCR_CPU Power", "%7.4f W", pmt->VDDCR_CPU_POWER); //This value doesn't correlate with what the cores
+        //print_line("VDDCR_CPU Power", "%7.4f W", pmta(VDDCR_CPU_POWER)); //This value doesn't correlate with what the cores
                                                                           //report, nor woth what is actually consumed. but is
                                                                           //the value HWiNFO shows.
-        print_line("VDDCR_SOC Power", "%7.4f W", pmt->VDDCR_SOC_POWER);
-        print_line("GMI2_VDDG Power", "%7.4f W", pmt->GMI2_VDDG_POWER);
-        print_line("L3 Logic Power", "%7.3f W + %7.4f W = %7.4f W", pmt->L3_LOGIC_POWER[0], pmt->L3_LOGIC_POWER[1],
-                pmt->L3_LOGIC_POWER[0]+pmt->L3_LOGIC_POWER[1]);
-        print_line("L3 VDDM Power", "%7.3f W + %7.4f W = %7.4f W", pmt->L3_VDDM_POWER[0], pmt->L3_VDDM_POWER[1],
-                pmt->L3_VDDM_POWER[0]+pmt->L3_VDDM_POWER[1]);
+        print_line("VDDCR_SOC Power", "%7.4f W", pmta(VDDCR_SOC_POWER));
+        print_line("GMI2_VDDG Power", "%7.4f W", pmta(GMI2_VDDG_POWER));
+        print_line("L3 Logic Power", "%7.3f W + %7.4f W = %7.4f W", pmta(L3_LOGIC_POWER[0]), pmta(L3_LOGIC_POWER[1]),
+                pmta(L3_LOGIC_POWER[0])+pmta(L3_LOGIC_POWER[1]));
+        print_line("L3 VDDM Power", "%7.3f W + %7.4f W = %7.4f W", pmta(L3_VDDM_POWER[0]), pmta(L3_VDDM_POWER[1]),
+                pmta(L3_VDDM_POWER[0])+pmta(L3_VDDM_POWER[1]));
 
         //These powers are supplied by other power lines to the CPU and are drawn from the 24 pin ATX connector on most boards
         print_line("","");
-        print_line("VDDIO_MEM Power", "%7.4f W", pmt->VDDIO_MEM_POWER);
-        print_line("IOD_VDDIO_MEM Power", "%7.4f W", pmt->IOD_VDDIO_MEM_POWER);
-        print_line("DDR_VDDP Power", "%7.4f W", pmt->DDR_VDDP_POWER);
-        print_line("VDD18 Power", "%7.4f W", pmt->VDD18_POWER); //Same as pmt->IO_VDD18_POWER
+        print_line("VDDIO_MEM Power", "%7.4f W", pmta(VDDIO_MEM_POWER));
+        print_line("IOD_VDDIO_MEM Power", "%7.4f W", pmta(IOD_VDDIO_MEM_POWER));
+        print_line("DDR_VDDP Power", "%7.4f W", pmta(DDR_VDDP_POWER));
+        print_line("VDD18 Power", "%7.4f W", pmta(VDD18_POWER)); //Same as pmta(IO_VDD18_POWER)
 
         //The sum is the thermal output of the whole package. Yes, this is higher than PPT and SOCKET_POWER.
         //Confirmed by measuring the actual current draw on the mainboard.
         print_line("","");
-        print_line("Calculated Thermal Output", "%7.4f W", total_core_power + pmt->VDDCR_SOC_POWER + pmt->GMI2_VDDG_POWER 
-                + pmt->L3_LOGIC_POWER[0] + pmt->L3_LOGIC_POWER[1] + pmt->L3_VDDM_POWER[0] + pmt->L3_VDDM_POWER[1]
-                + pmt->VDDIO_MEM_POWER + pmt->IOD_VDDIO_MEM_POWER + pmt->DDR_VDDP_POWER + pmt->VDD18_POWER);
+        print_line("Calculated Thermal Output", "%7.4f W", total_core_power + pmta(VDDCR_SOC_POWER) + pmta(GMI2_VDDG_POWER) 
+                + pmta(L3_LOGIC_POWER[0]) + pmta(L3_LOGIC_POWER[1]) + pmta(L3_VDDM_POWER[0]) + pmta(L3_VDDM_POWER[1])
+                + pmta(VDDIO_MEM_POWER) + pmta(IOD_VDDIO_MEM_POWER) + pmta(DDR_VDDP_POWER) + pmta(VDD18_POWER));
 
         fprintf(stdout, "├── Additional Reports ─────────────────────────┼────────────────────────────────────────────────┤\n");
-        //print_line("ROC_POWER", "%7.4f",pmt->ROC_POWER);
-        print_line("SoC Power (SVI2)", "%8.3f V | %7.3f A | %8.3f W", pmt->SOC_TELEMETRY_VOLTAGE, pmt->SOC_TELEMETRY_CURRENT, pmt->SOC_TELEMETRY_POWER);
-        print_line("Core Power (SVI2)", "%8.3f V | %7.3f A | %8.3f W", pmt->CPU_TELEMETRY_VOLTAGE, pmt->CPU_TELEMETRY_CURRENT, pmt->CPU_TELEMETRY_POWER);
-        print_line("Core Power (SMU)", "%7.3f W", pmt->VDDCR_CPU_POWER);
-        print_line("Socket Power (SMU)", "%7.4f W", pmt->SOCKET_POWER);
-        print_line("Package Power (SMU)", "%7.4f W", pmt->package_power);
+        //print_line("ROC_POWER", "%7.4f",pmta(ROC_POWER));
+        print_line("SoC Power (SVI2)", "%8.3f V | %7.3f A | %8.3f W", pmta(SOC_TELEMETRY_VOLTAGE), pmta(SOC_TELEMETRY_CURRENT), pmta(SOC_TELEMETRY_POWER));
+        print_line("Core Power (SVI2)", "%8.3f V | %7.3f A | %8.3f W", pmta(CPU_TELEMETRY_VOLTAGE), pmta(CPU_TELEMETRY_CURRENT), pmta(CPU_TELEMETRY_POWER));
+        print_line("Core Power (SMU)", "%7.3f W", pmta(VDDCR_CPU_POWER));
+        print_line("Socket Power (SMU)", "%7.4f W", pmta(SOCKET_POWER));
+        print_line("Package Power (SMU)", "%7.4f W", pmta(PACKAGE_POWER));
         fprintf(stdout, "╰───────────────────────────────────────────────┴────────────────────────────────────────────────╯\n");
 
 
@@ -712,7 +516,7 @@ void show_help(char* program) {
             "\t-h          - Show this help screen.\n"
             "\t-v          - Show program version.\n"
             "\t-m          - Print DRAM Timings and exit.\n"
-            "\t-f          - Force PM table monitoring even if the PM table version is not supported.\n"
+//            "\t-f          - Force PM table monitoring even if the PM table version is not supported.\n"
             "\t-d          - Show disabled cores.\n"
             "\t-u<seconds> - Update the monitoring only after this number of second(s) have passed. Defaults to 1.\n",
         program
