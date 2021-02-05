@@ -4,7 +4,7 @@
  *    Florian Huehn <hattedsquirrel@gmail.com> (https://hattedsquirrel.net)
  *    Leonardo Gates <leogatesx9r@protonmail.com>
  *
- * This program is free software: you can redistribute it &&/or modify
+ * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
@@ -300,7 +300,8 @@ void start_pm_monitor(int force) {
     //Select matching PM Table
     //ToDo: implement "force" table version
     switch(obj.pm_table_version) {
-        case 0x380804: pm_table_0x380804(&pmt, pm_buf); break;
+        case 0x380804: pm_table_0x380804(&pmt, pm_buf); break; //Ryzen 5900X
+        case 0x240903: pm_table_0x240903(&pmt, pm_buf); break; //Ryzen 3700X / 3800X
         default:
             fprintf(stderr, "This PM Table version is currently not supported.\n");
             exit(0);

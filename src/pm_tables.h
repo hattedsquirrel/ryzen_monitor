@@ -3,7 +3,7 @@
  * Copyright (C) 2021
  *    Florian Huehn <hattedsquirrel@gmail.com> (https://hattedsquirrel.net)
  *
- * This program is free software: you can redistribute it &&/or modify
+ * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
@@ -185,5 +185,6 @@ typedef struct {
 } pm_table;
 
 void pm_table_0x380804(pm_table *pmt, void* base_addr);
+void pm_table_0x240903(pm_table *pmt, void* base_addr);
 
 #endif
