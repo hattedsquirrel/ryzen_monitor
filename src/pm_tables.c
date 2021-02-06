@@ -290,9 +290,11 @@ void pm_table_0x240903(pm_table *pmt, void* base_addr) {
     pmt->VDD18_POWER     = pm_element(27);
     pmt->ROC_POWER       = pm_element(28);
     pmt->SOCKET_POWER    = pm_element(29);
-    pmt->PACKAGE_POWER   = pm_element(29); //PACKAGE_POWER does not exist in this table. Set
-                                           //it to SOCKET_POWER which should be pretty much
-                                           //identical.
+    //pmt->PACKAGE_POWER   = pm_element(29); //PACKAGE_POWER does not exist in this table. It
+                                           // *should* be somewhat similar to SOCKET_POWER.
+                                           // However, since we show both fields in the output
+                                           // there is no use in having it show the exact same
+                                           // value two times. So don't set it.
 
     pmt->PPT_FREQUENCY     = pm_element(30);
     pmt->TDC_FREQUENCY     = pm_element(31);
