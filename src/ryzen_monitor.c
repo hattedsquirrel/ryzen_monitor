@@ -270,6 +270,8 @@ void print_line(const char* label, const char* value_format, ...) {
 //current PM Table version, it's pointer is set to 0. This helper returns
 //NAN for not available fields.
 #define pmta(elem) ((pmt.elem)?(*pmt.elem):NAN)
+//Same, but with 0 as return. For summations that should not fail if one value is not present.
+#define pmta0(elem) ((pmt.elem)?(*pmt.elem):0)
 
 void start_pm_monitor(int force) {
     float core_voltage, core_frequency, package_sleep_time, core_sleep_time, edc_value, average_voltage;
@@ -466,9 +468,9 @@ void start_pm_monitor(int force) {
         print_line("VDDCR_SOC Power", "%7.4f W", pmta(VDDCR_SOC_POWER));
         print_line("GMI2_VDDG Power", "%7.4f W", pmta(GMI2_VDDG_POWER));
         print_line("L3 Logic Power", "%7.3f W + %7.4f W = %7.4f W", pmta(L3_LOGIC_POWER[0]), pmta(L3_LOGIC_POWER[1]),
-                pmta(L3_LOGIC_POWER[0])+pmta(L3_LOGIC_POWER[1]));
+                pmta0(L3_LOGIC_POWER[0])+pmta0(L3_LOGIC_POWER[1]));
         print_line("L3 VDDM Power", "%7.3f W + %7.4f W = %7.4f W", pmta(L3_VDDM_POWER[0]), pmta(L3_VDDM_POWER[1]),
-                pmta(L3_VDDM_POWER[0])+pmta(L3_VDDM_POWER[1]));
+                pmta0(L3_VDDM_POWER[0])+pmta0(L3_VDDM_POWER[1]));
 
         //These powers are supplied by other power lines to the CPU and are drawn from the 24 pin ATX connector on most boards
         print_line("","");
@@ -480,9 +482,9 @@ void start_pm_monitor(int force) {
         //The sum is the thermal output of the whole package. Yes, this is higher than PPT and SOCKET_POWER.
         //Confirmed by measuring the actual current draw on the mainboard.
         print_line("","");
-        print_line("Calculated Thermal Output", "%7.4f W", total_core_power + pmta(VDDCR_SOC_POWER) + pmta(GMI2_VDDG_POWER) 
-                + pmta(L3_LOGIC_POWER[0]) + pmta(L3_LOGIC_POWER[1]) + pmta(L3_VDDM_POWER[0]) + pmta(L3_VDDM_POWER[1])
-                + pmta(VDDIO_MEM_POWER) + pmta(IOD_VDDIO_MEM_POWER) + pmta(DDR_VDDP_POWER) + pmta(VDD18_POWER));
+        print_line("Calculated Thermal Output", "%7.4f W", total_core_power + pmta0(VDDCR_SOC_POWER) + pmta0(GMI2_VDDG_POWER) 
+                + pmta0(L3_LOGIC_POWER[0]) + pmta0(L3_LOGIC_POWER[1]) + pmta0(L3_VDDM_POWER[0]) + pmta0(L3_VDDM_POWER[1])
+                + pmta0(VDDIO_MEM_POWER) + pmta0(IOD_VDDIO_MEM_POWER) + pmta0(DDR_VDDP_POWER) + pmta0(VDD18_POWER));
 
         fprintf(stdout, "├── Additional Reports ─────────────────────────┼────────────────────────────────────────────────┤\n");
         //print_line("ROC_POWER", "%7.4f",pmta(ROC_POWER));
