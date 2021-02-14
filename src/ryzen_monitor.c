@@ -305,7 +305,9 @@ void start_pm_monitor(int force) {
         case 0x380804: pm_table_0x380804(&pmt, pm_buf); break; //Ryzen 5900X
         case 0x240903: pm_table_0x240903(&pmt, pm_buf); break; //Ryzen 3700X / 3800X
         default:
-            fprintf(stderr, "This PM Table version is currently not supported.\n");
+            fprintf(stderr, "This PM Table version (0x%x) is currently not supported.\n", obj.pm_table_version);
+            fprintf(stderr, "Processor name: %s\n", get_processor_name());
+            fprintf(stderr, "SMU FW version: %s\n", smu_get_fw_version(&obj));
             exit(0);
             break;
     }
