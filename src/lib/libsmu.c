@@ -60,7 +60,7 @@ int try_open_path(const char* pathname, int mode, int* fd) {
 smu_return_val smu_init_parse(smu_obj_t* obj) {
     int ver_maj, ver_min, ver_rev, ver_alt, len, i, c;
     char rd_buf[1024];
-    int tmp_fd, ret;
+    int tmp_fd, ret, ok;
 
     memset(rd_buf, 0, sizeof(rd_buf));
 
@@ -75,8 +75,12 @@ smu_return_val smu_init_parse(smu_obj_t* obj) {
         return SMU_Return_RWError;
 
     // The driver version must match the expected exactly.
-    printf("rd_buf: %s", rd_buf);
-    if (strcmp(rd_buf, LIBSMU_SUPPORTED_DRIVER_VERSION "\n"))
+    if (rd_buf[strlen(rd_buf)-1]=='\n') rd_buf[strlen(rd_buf)-1]=0;
+    printf("ryzen_smu version string: %s\n", rd_buf);
+    for (i=0,ok=0; i<KERNEL_DRIVER_SUPP_VERS_COUNT; i++)
+        if (!strcmp(rd_buf, kernel_driver_supported_versions[i]))
+            ok=1;
+    if (!ok)
         return SMU_Return_DriverVersion;
 
     sscanf(rd_buf, "%d.%d.%d\n", &ver_maj, &ver_min, &ver_rev);

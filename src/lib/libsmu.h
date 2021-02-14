@@ -24,7 +24,11 @@
 #include <pthread.h>
 
 /* Version the loaded driver must use to be compatible. */
-#define LIBSMU_SUPPORTED_DRIVER_VERSION                    "0.1.0"
+#define KERNEL_DRIVER_SUPP_VERS_COUNT 2
+static char kernel_driver_supported_versions[KERNEL_DRIVER_SUPP_VERS_COUNT][10] = {
+    "0.1.0",
+    "0.1.1"
+};
 
 /**
  * SMU Mailbox Target
