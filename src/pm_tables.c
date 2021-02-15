@@ -33,6 +33,10 @@
 #define assign_pm_elements_4(arr,e0,e1,e2,e3) \
     arr[0]=pm_element(e0); arr[1]=pm_element(e1); arr[2]=pm_element(e2); arr[3]=pm_element(e3);
 
+//Assign 4 consecutive elements to a array of size 4
+#define assign_pm_elements_4_consec(arr,e) \
+    arr[0]=pm_element(e  ); arr[1]=pm_element(e+1); arr[2]=pm_element(e+2); arr[3]=pm_element(e+3);
+
 //Assign 8 consecutive elements to a array of size 8
 #define assign_pm_elements_8_consec(arr,e) \
     arr[0]=pm_element(e  ); arr[1]=pm_element(e+1); arr[2]=pm_element(e+2); arr[3]=pm_element(e+3);\
@@ -53,6 +57,7 @@ void pm_table_0x380804(pm_table *pmt, void* base_addr) {
 
     pmt->version = 0x380804;
     pmt->max_cores = 16; //Number of cores supported by this PM table version
+    pmt->max_l3 = 2; //Number of L3 caches supported by this PM table version
     pmt->zen_version = 3; //Zen3
 
     /* Legend for notes in comments:
@@ -431,5 +436,194 @@ void pm_table_0x240903(pm_table *pmt, void* base_addr) {
     //MP5_BUSY is at 325
 
     pmt->min_size = 326*4; //(Highest element we access + 1)*4.
+                           //Needed to avoid illegal memory access
+}
+
+void pm_table_0x240803(pm_table *pmt, void* base_addr) {
+    // Ryzen 3950X
+    // Could not test myself, as I dont have the hardware. But most values seem reasonable.
+    // (Re)constructed using the pm table dumps from 
+    // https://github.com/hattedsquirrel/ryzen_monitor/issues/2#
+
+    pmt->version = 0x240803;
+    pmt->max_cores = 16; //Number of cores supported by this PM table version
+    pmt->max_l3 = 4; //Number of L3 caches supported by this PM table version
+    pmt->zen_version = 2; //Zen2
+
+    pmt->PPT_LIMIT = pm_element( 0);
+    pmt->PPT_VALUE = pm_element( 1);
+    pmt->TDC_LIMIT = pm_element( 2);
+    pmt->TDC_VALUE = pm_element( 3);
+    pmt->THM_LIMIT = pm_element( 4);
+    pmt->THM_VALUE = pm_element( 5);
+    pmt->FIT_LIMIT = pm_element( 6);
+    pmt->FIT_VALUE = pm_element( 7);
+    pmt->EDC_LIMIT = pm_element( 8);
+    pmt->EDC_VALUE = pm_element( 9);
+    pmt->VID_LIMIT = pm_element(10);
+    pmt->VID_VALUE = pm_element(11);
+
+    pmt->PPT_WC     = pm_element(12);
+    pmt->PPT_ACTUAL = pm_element(13);
+    pmt->TDC_WC     = pm_element(14);
+    pmt->TDC_ACTUAL = pm_element(15);
+    pmt->THM_WC     = pm_element(16);
+    pmt->THM_ACTUAL = pm_element(17);
+    pmt->FIT_WC     = pm_element(18);
+    pmt->FIT_ACTUAL = pm_element(19);
+    pmt->EDC_WC     = pm_element(20);
+    pmt->EDC_ACTUAL = pm_element(21);
+    pmt->VID_WC     = pm_element(22);
+    pmt->VID_ACTUAL = pm_element(23);
+
+    pmt->VDDCR_CPU_POWER = pm_element(24);
+    pmt->VDDCR_SOC_POWER = pm_element(25);
+    pmt->VDDIO_MEM_POWER = pm_element(26);
+    pmt->VDD18_POWER     = pm_element(27);
+    pmt->ROC_POWER       = pm_element(28);
+    pmt->SOCKET_POWER    = pm_element(29);
+    //pmt->PACKAGE_POWER   = pm_element(29); //PACKAGE_POWER does not exist in this table. It
+                                           // *should* be somewhat similar to SOCKET_POWER.
+                                           // However, since we show both fields in the output
+                                           // there is no use in having it show the exact same
+                                           // value two times. So don't set it.
+
+    pmt->PPT_FREQUENCY     = pm_element(30);
+    pmt->TDC_FREQUENCY     = pm_element(31);
+    pmt->THM_FREQUENCY     = pm_element(32);
+    pmt->PROCHOT_FREQUENCY = pm_element(33);
+    pmt->VOLTAGE_FREQUENCY = pm_element(34);
+    pmt->CCA_FREQUENCY     = pm_element(35);
+
+    pmt->FIT_VOLTAGE            = pm_element(37);
+    pmt->FIT_PRE_VOLTAGE        = pm_element(38);
+    pmt->LATCHUP_VOLTAGE        = pm_element(39);
+    pmt->CPU_SET_VOLTAGE        = pm_element(40);
+    pmt->CPU_TELEMETRY_VOLTAGE  = pm_element(41);
+    pmt->CPU_TELEMETRY_CURRENT  = pm_element(42);
+    pmt->CPU_TELEMETRY_POWER    = pm_element(43);
+    pmt->SOC_SET_VOLTAGE        = pm_element(44);
+    pmt->SOC_TELEMETRY_VOLTAGE  = pm_element(45);
+    pmt->SOC_TELEMETRY_CURRENT  = pm_element(46);
+    pmt->SOC_TELEMETRY_POWER    = pm_element(47);
+
+    pmt->FCLK_FREQ          = pm_element(48);
+    pmt->FCLK_FREQ_EFF      = pm_element(49);
+    pmt->UCLK_FREQ          = pm_element(50);
+    pmt->MEMCLK_FREQ        = pm_element(51);
+    pmt->FCLK_DRAM_SETPOINT = pm_element(52);
+    pmt->FCLK_DRAM_BUSY     = pm_element(53);
+    pmt->FCLK_GMI_SETPOINT  = pm_element(54);
+    pmt->FCLK_GMI_BUSY      = pm_element(55);
+    pmt->FCLK_IOHC_SETPOINT = pm_element(56);
+    pmt->FCLK_IOHC_BUSY     = pm_element(57);
+    pmt->FCLK_XGMI_SETPOINT = pm_element(58);
+    pmt->FCLK_XGMI_BUSY     = pm_element(59);
+
+    pmt->CCM_READS     = pm_element(60);
+    pmt->CCM_WRITES    = pm_element(61);
+    pmt->IOMS          = pm_element(62);
+    pmt->XGMI          = pm_element(63);
+    pmt->CS_UMC_READS  = pm_element(64);
+    pmt->CS_UMC_WRITES = pm_element(65);
+    assign_pm_elements_4(pmt->FCLK_RESIDENCY,     66,  67,  68,  69);
+    assign_pm_elements_4(pmt->FCLK_FREQ_TABLE,    70,  71,  72,  73);
+    assign_pm_elements_4(pmt->UCLK_FREQ_TABLE,    74,  75,  76,  77);
+    assign_pm_elements_4(pmt->MEMCLK_FREQ_TABLE,  78,  79,  80,  81);
+    assign_pm_elements_4(pmt->FCLK_VOLTAGE,       82,  83,  84,  85);
+
+    assign_pm_elements_4(pmt->LCLK_SETPOINT,  86,  92,  98, 104);
+    assign_pm_elements_4(pmt->LCLK_BUSY,      87,  93,  99, 105);
+    assign_pm_elements_4(pmt->LCLK_FREQ,      88,  94, 100, 106);
+    assign_pm_elements_4(pmt->LCLK_FREQ_EFF,  89,  95, 101, 107);
+    assign_pm_elements_4(pmt->LCLK_MAX_DPM,   90,  96, 102, 108);
+    assign_pm_elements_4(pmt->LCLK_MIN_DPM,   91,  97, 103, 109);
+
+    pmt->XGMI_SETPOINT   = pm_element(110);
+    pmt->XGMI_BUSY       = pm_element(111);
+    pmt->XGMI_LANE_WIDTH = pm_element(112);
+    pmt->XGMI_DATA_RATE  = pm_element(113);
+
+    pmt->SOC_POWER           = pm_element(114);
+    pmt->SOC_TEMP            = pm_element(115);
+    pmt->DDR_VDDP_POWER      = pm_element(116);
+    pmt->DDR_VDDIO_MEM_POWER = pm_element(117);
+    pmt->GMI2_VDDG_POWER     = pm_element(118);
+    pmt->IO_VDDCR_SOC_POWER  = pm_element(119);
+    pmt->IOD_VDDIO_MEM_POWER = pm_element(120);
+    pmt->IO_VDD18_POWER      = pm_element(121);
+    pmt->TDP                 = pm_element(122);
+    pmt->DETERMINISM         = pm_element(123);
+    pmt->V_VDDM              = pm_element(124);
+    pmt->V_VDDP              = pm_element(125);
+    pmt->V_VDDG              = pm_element(126);
+
+    pmt->PEAK_TEMP      = pm_element(127);
+    pmt->PEAK_VOLTAGE   = pm_element(128);
+    pmt->AVG_CORE_COUNT = pm_element(129);
+    pmt->CCLK_LIMIT     = pm_element(130);
+    pmt->MAX_VOLTAGE    = pm_element(131);
+    pmt->DC_BTC         = pm_element(132);
+    //pmt->PACKAGE_POWER  = pm_element(xxx); //Does not exist. Use SOCKET_POWER
+    pmt->CSTATE_BOOST   = pm_element(133);
+    pmt->PROCHOT        = pm_element(134);
+    pmt->PC6            = pm_element(135);
+    pmt->PWM            = pm_element(136);
+
+    //From the PM table dumps I got, I couldn't figure out which clock is which
+    //Clocks were static over all dumps, but system seems to be under full load
+    //for all dump
+    //pmt->SOCCLK   = pm_element(137); //elem 137 -> 457.14
+    //pmt->SHUBCLK  = pm_element(138); //elem 138 -> 457.14
+    //pmt->MP0CLK   = pm_element(139); //elem 139 -> 457.14
+    //pmt->MP1CLK   = pm_element(140); //elem 140 -> 457.14
+    //pmt->MP5CLK   = pm_element(141); //elem 141 -> 400.00
+    //pmt->SMNCLK   = pm_element(142); //elem 142 -> 500.00
+    //pmt->TWIXCLK  = pm_element(143); //elem 143 -> 400.00
+    pmt->WAFLCLK  = pm_element(144);
+
+    pmt->DPM_BUSY = pm_element(145);
+    pmt->MP1_BUSY = pm_element(146);
+    //pmt->MP5_BUSY //No idea where it is or if it exists
+
+    assign_pm_elements_16_consec(pmt->CORE_POWER       , 147);
+    assign_pm_elements_16_consec(pmt->CORE_VOLTAGE     , 163);
+    assign_pm_elements_16_consec(pmt->CORE_TEMP        , 179);
+    assign_pm_elements_16_consec(pmt->CORE_FIT         , 195);
+    assign_pm_elements_16_consec(pmt->CORE_IDDMAX      , 211);
+    assign_pm_elements_16_consec(pmt->CORE_FREQ        , 227);
+    assign_pm_elements_16_consec(pmt->CORE_FREQEFF     , 243);
+    assign_pm_elements_16_consec(pmt->CORE_C0          , 259);
+    assign_pm_elements_16_consec(pmt->CORE_CC1         , 275);
+    assign_pm_elements_16_consec(pmt->CORE_CC6         , 291);
+    assign_pm_elements_16_consec(pmt->CORE_CKS_FDD     , 307);
+    assign_pm_elements_16_consec(pmt->CORE_CI_FDD      , 323);
+    assign_pm_elements_16_consec(pmt->CORE_IRM         , 339);
+    assign_pm_elements_16_consec(pmt->CORE_PSTATE      , 355);
+    //assign_pm_elements_8_consec(pmt->CORE_FREQ_LIM_MAX, xxx); //Does not exist.
+    //assign_pm_elements_8_consec(pmt->CORE_FREQ_LIM_MIN, xxx); //Does not exist.
+    assign_pm_elements_16_consec(pmt->CORE_CPPC_MAX    , 371);
+    assign_pm_elements_16_consec(pmt->CORE_CPPC_MIN    , 387);
+    assign_pm_elements_16_consec(pmt->CORE_SC_LIMIT    , 403);
+    assign_pm_elements_16_consec(pmt->CORE_SC_CAC      , 419);
+    assign_pm_elements_16_consec(pmt->CORE_SC_RESIDENCY, 435);
+
+    assign_pm_elements_4_consec(pmt->L3_LOGIC_POWER   , 451);
+    assign_pm_elements_4_consec(pmt->L3_VDDM_POWER    , 455);
+    assign_pm_elements_4_consec(pmt->L3_TEMP          , 459);
+    assign_pm_elements_4_consec(pmt->L3_FIT           , 463);
+    assign_pm_elements_4_consec(pmt->L3_IDDMAX        , 467);
+    assign_pm_elements_4_consec(pmt->L3_FREQ          , 471);
+    assign_pm_elements_4_consec(pmt->L3_CKS_FDD       , 475);
+    assign_pm_elements_4_consec(pmt->L3_CCA_THRESHOLD , 479);
+    assign_pm_elements_4_consec(pmt->L3_CCA_CAC       , 483);
+    assign_pm_elements_4_consec(pmt->L3_CCA_ACTIVATION, 487);
+    assign_pm_elements_4_consec(pmt->L3_EDC_LIMIT     , 491);
+    assign_pm_elements_4_consec(pmt->L3_EDC_CAC       , 495);
+    assign_pm_elements_4_consec(pmt->L3_EDC_RESIDENCY , 499);
+    
+    //Two other values at 503 and 504: 31.10 and 30.04
+
+    pmt->min_size = 503*4; //(Highest element we access + 1)*4.
                            //Needed to avoid illegal memory access
 }

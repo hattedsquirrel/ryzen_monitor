@@ -37,7 +37,7 @@
 #include <libsmu.h>
 #include "pm_tables.h"
 
-#define PROGRAM_VERSION "1.0.1"
+#define PROGRAM_VERSION "1.0.2"
 
 #define READ_SMN_V1(offs) { if (smu_read_smn_addr(&obj, offs + offset, &value1) != SMU_Return_OK) goto _READ_ERROR; }
 #define READ_SMN_V2(offs) { if (smu_read_smn_addr(&obj, offs + offset, &value2) != SMU_Return_OK) goto _READ_ERROR; }
@@ -277,6 +277,7 @@ void start_pm_monitor(int force) {
     float core_voltage, core_frequency, package_sleep_time, core_sleep_time, edc_value, average_voltage;
     float peak_core_frequency, peak_core_temp, peak_core_voltage;
     float total_core_voltage, total_core_power, total_usage, total_core_CC6;
+    float l3_logic_power, l3_vddm_power;
     const char* name, *codename, *smu_fw_ver;
     unsigned int cores, ccds, ccxs, cores_per_ccx, core_disable_map, enabled_cores_count=0;
     unsigned int if_ver, i;
@@ -304,6 +305,7 @@ void start_pm_monitor(int force) {
     switch(obj.pm_table_version) {
         case 0x380804: pm_table_0x380804(&pmt, pm_buf); break; //Ryzen 5900X
         case 0x240903: pm_table_0x240903(&pmt, pm_buf); break; //Ryzen 3700X / 3800X
+        case 0x240803: pm_table_0x240803(&pmt, pm_buf); break; //Ryzen 3950X
         default:
             fprintf(stderr, "This PM Table version (0x%x) is currently not supported.\n", obj.pm_table_version);
             fprintf(stderr, "Processor name: %s\n", get_processor_name());
@@ -316,6 +318,9 @@ void start_pm_monitor(int force) {
         fprintf(stderr, "Selected PM Table is larger than the PM Table returned by the SMU.\n");
         exit(0);
     }
+    //Avoid accesing bejond bounds of the defined arrays.
+    if (pmt.max_l3 > PMT_MAX_NUM_L3) pmt.max_l3 = PMT_MAX_NUM_L3;
+    if (pmt.max_cores > PMT_MAX_NUM_CORES) pmt.max_cores = PMT_MAX_NUM_CORES;
     //Maximum core count. Just to be safe. Will be overwritten by get_processor_topology(...).
     enabled_cores_count = pmt.max_cores;
 
@@ -469,10 +474,40 @@ void start_pm_monitor(int force) {
                                                                           //the value HWiNFO shows.
         print_line("VDDCR_SOC Power", "%7.4f W", pmta(VDDCR_SOC_POWER));
         print_line("GMI2_VDDG Power", "%7.4f W", pmta(GMI2_VDDG_POWER));
-        print_line("L3 Logic Power", "%7.3f W + %7.4f W = %7.4f W", pmta(L3_LOGIC_POWER[0]), pmta(L3_LOGIC_POWER[1]),
-                pmta0(L3_LOGIC_POWER[0])+pmta0(L3_LOGIC_POWER[1]));
-        print_line("L3 VDDM Power", "%7.3f W + %7.4f W = %7.4f W", pmta(L3_VDDM_POWER[0]), pmta(L3_VDDM_POWER[1]),
-                pmta0(L3_VDDM_POWER[0])+pmta0(L3_VDDM_POWER[1]));
+        l3_logic_power=NAN;
+        l3_vddm_power=NAN;
+        if (pmt.max_l3 <= 1) {
+            l3_logic_power = pmta0(L3_LOGIC_POWER[0]);
+            l3_vddm_power = pmta0(L3_VDDM_POWER[0]);
+            print_line("L3 Logic Power", "%7.4f W", pmta(L3_LOGIC_POWER[0]));
+            print_line("L3 VDDM Power", "%7.4f W", pmta(L3_VDDM_POWER[0]));
+        }
+        else if (pmt.max_l3 <= 2) {
+            l3_logic_power = pmta0(L3_LOGIC_POWER[0]) + pmta0(L3_LOGIC_POWER[1]);
+            l3_vddm_power = pmta0(L3_VDDM_POWER[0]) + pmta0(L3_VDDM_POWER[1]);
+            print_line("L3 Logic Power", "%7.3f W + %7.4f W = %7.4f W",
+                    pmta(L3_LOGIC_POWER[0]), pmta(L3_LOGIC_POWER[1]),
+                    l3_logic_power);
+            print_line("L3 VDDM Power", "%7.3f W + %7.4f W = %7.4f W",
+                    pmta(L3_VDDM_POWER[0]), pmta(L3_VDDM_POWER[1]),
+                    l3_vddm_power);
+        }
+        else {
+            l3_logic_power = pmta0(L3_LOGIC_POWER[0]) + pmta0(L3_LOGIC_POWER[1])
+                           + pmta0(L3_LOGIC_POWER[2]) + pmta0(L3_LOGIC_POWER[3]);
+            l3_vddm_power = pmta0(L3_VDDM_POWER[0]) + pmta0(L3_VDDM_POWER[1])
+                          + pmta0(L3_VDDM_POWER[2]) + pmta0(L3_VDDM_POWER[3]);
+            print_line("L3 Logic Power",   "%7.3f W + %7.4f W            ",
+                    pmta(L3_LOGIC_POWER[0]), pmta(L3_LOGIC_POWER[1]));
+            print_line("L3 Logic Power", "+ %7.3f W + %7.4f W = %7.4f W",
+                    pmta(L3_LOGIC_POWER[2]), pmta(L3_LOGIC_POWER[3]),
+                    l3_logic_power);
+            print_line("L3 VDDM Power",    "%7.3f W + %7.4f W            ",
+                    pmta(L3_VDDM_POWER[0]), pmta(L3_VDDM_POWER[1]));
+            print_line("L3 VDDM Power",  "+ %7.3f W + %7.4f W = %7.4f W",
+                    pmta(L3_VDDM_POWER[2]), pmta(L3_VDDM_POWER[3]),
+                    l3_vddm_power);
+        }
 
         //These powers are supplied by other power lines to the CPU and are drawn from the 24 pin ATX connector on most boards
         print_line("","");
@@ -485,7 +520,7 @@ void start_pm_monitor(int force) {
         //Confirmed by measuring the actual current draw on the mainboard.
         print_line("","");
         print_line("Calculated Thermal Output", "%7.4f W", total_core_power + pmta0(VDDCR_SOC_POWER) + pmta0(GMI2_VDDG_POWER) 
-                + pmta0(L3_LOGIC_POWER[0]) + pmta0(L3_LOGIC_POWER[1]) + pmta0(L3_VDDM_POWER[0]) + pmta0(L3_VDDM_POWER[1])
+                + l3_logic_power + l3_vddm_power
                 + pmta0(VDDIO_MEM_POWER) + pmta0(IOD_VDDIO_MEM_POWER) + pmta0(DDR_VDDP_POWER) + pmta0(VDD18_POWER));
 
         fprintf(stdout, "├── Additional Reports ─────────────────────────┼────────────────────────────────────────────────┤\n");
@@ -494,7 +529,7 @@ void start_pm_monitor(int force) {
         print_line("Core Power (SVI2)", "%8.3f V | %7.3f A | %8.3f W", pmta(CPU_TELEMETRY_VOLTAGE), pmta(CPU_TELEMETRY_CURRENT), pmta(CPU_TELEMETRY_POWER));
         print_line("Core Power (SMU)", "%7.3f W", pmta(VDDCR_CPU_POWER));
         print_line("Socket Power (SMU)", "%7.4f W", pmta(SOCKET_POWER));
-        print_line("Package Power (SMU)", "%7.4f W", pmta(PACKAGE_POWER));
+        if (pmt.PACKAGE_POWER) print_line("Package Power (SMU)", "%7.4f W", pmta(PACKAGE_POWER));
         fprintf(stdout, "╰───────────────────────────────────────────────┴────────────────────────────────────────────────╯\n");
 
 

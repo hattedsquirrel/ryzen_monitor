@@ -20,9 +20,13 @@
 #ifndef pm_tables_h
 #define pm_tables_h
 
+#define PMT_MAX_NUM_L3      4
+#define PMT_MAX_NUM_CORES   16
+
 typedef struct {
     unsigned int version;  //PM table version
     int max_cores;         //Number of cores supported by the PM table
+    int max_l3;            //Number of L3 caches supported by the PM table
     int zen_version;       //Zen, Zen2 or Zen3?
     unsigned int min_size; //Size of the selected PM table version
 
@@ -147,44 +151,45 @@ typedef struct {
     float *DPM_BUSY;
     float *MP1_BUSY;
     float *MP5_BUSY;
-    float *CORE_POWER[16];
-    float *CORE_VOLTAGE[16];
-    float *CORE_TEMP[16];
-    float *CORE_FIT[16];
-    float *CORE_IDDMAX[16];
-    float *CORE_FREQ[16];
-    float *CORE_FREQEFF[16];
-    float *CORE_C0[16];
-    float *CORE_CC1[16];
-    float *CORE_CC6[16];
-    float *CORE_CKS_FDD[16];
-    float *CORE_CI_FDD[16];
-    float *CORE_IRM[16];
-    float *CORE_PSTATE[16];
-    float *CORE_FREQ_LIM_MAX[16];
-    float *CORE_FREQ_LIM_MIN[16];
-    float *CORE_CPPC_MAX[16];
-    float *CORE_CPPC_MIN[16];
-    float *CORE_unk[16];
-    float *CORE_SC_LIMIT[16];
-    float *CORE_SC_CAC[16];
-    float *CORE_SC_RESIDENCY[16];
-    float *L3_LOGIC_POWER[2];
-    float *L3_VDDM_POWER[2];
-    float *L3_TEMP[2];
-    float *L3_FIT[2];
-    float *L3_IDDMAX[2];
-    float *L3_FREQ[2];
-    float *L3_CKS_FDD[2];
-    float *L3_CCA_THRESHOLD[2];
-    float *L3_CCA_CAC[2];
-    float *L3_CCA_ACTIVATION[2];
-    float *L3_EDC_LIMIT[2];
-    float *L3_EDC_CAC[2];
-    float *L3_EDC_RESIDENCY[2];
+    float *CORE_POWER[PMT_MAX_NUM_CORES];
+    float *CORE_VOLTAGE[PMT_MAX_NUM_CORES];
+    float *CORE_TEMP[PMT_MAX_NUM_CORES];
+    float *CORE_FIT[PMT_MAX_NUM_CORES];
+    float *CORE_IDDMAX[PMT_MAX_NUM_CORES];
+    float *CORE_FREQ[PMT_MAX_NUM_CORES];
+    float *CORE_FREQEFF[PMT_MAX_NUM_CORES];
+    float *CORE_C0[PMT_MAX_NUM_CORES];
+    float *CORE_CC1[PMT_MAX_NUM_CORES];
+    float *CORE_CC6[PMT_MAX_NUM_CORES];
+    float *CORE_CKS_FDD[PMT_MAX_NUM_CORES];
+    float *CORE_CI_FDD[PMT_MAX_NUM_CORES];
+    float *CORE_IRM[PMT_MAX_NUM_CORES];
+    float *CORE_PSTATE[PMT_MAX_NUM_CORES];
+    float *CORE_FREQ_LIM_MAX[PMT_MAX_NUM_CORES];
+    float *CORE_FREQ_LIM_MIN[PMT_MAX_NUM_CORES];
+    float *CORE_CPPC_MAX[PMT_MAX_NUM_CORES];
+    float *CORE_CPPC_MIN[PMT_MAX_NUM_CORES];
+    float *CORE_unk[PMT_MAX_NUM_CORES];
+    float *CORE_SC_LIMIT[PMT_MAX_NUM_CORES];
+    float *CORE_SC_CAC[PMT_MAX_NUM_CORES];
+    float *CORE_SC_RESIDENCY[PMT_MAX_NUM_CORES];
+    float *L3_LOGIC_POWER[PMT_MAX_NUM_L3];
+    float *L3_VDDM_POWER[PMT_MAX_NUM_L3];
+    float *L3_TEMP[PMT_MAX_NUM_L3];
+    float *L3_FIT[PMT_MAX_NUM_L3];
+    float *L3_IDDMAX[PMT_MAX_NUM_L3];
+    float *L3_FREQ[PMT_MAX_NUM_L3];
+    float *L3_CKS_FDD[PMT_MAX_NUM_L3];
+    float *L3_CCA_THRESHOLD[PMT_MAX_NUM_L3];
+    float *L3_CCA_CAC[PMT_MAX_NUM_L3];
+    float *L3_CCA_ACTIVATION[PMT_MAX_NUM_L3];
+    float *L3_EDC_LIMIT[PMT_MAX_NUM_L3];
+    float *L3_EDC_CAC[PMT_MAX_NUM_L3];
+    float *L3_EDC_RESIDENCY[PMT_MAX_NUM_L3];
 } pm_table;
 
 void pm_table_0x380804(pm_table *pmt, void* base_addr);
 void pm_table_0x240903(pm_table *pmt, void* base_addr);
+void pm_table_0x240803(pm_table *pmt, void* base_addr);
 
 #endif
