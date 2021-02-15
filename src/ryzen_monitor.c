@@ -250,7 +250,7 @@ unsigned int get_processor_topology(unsigned int* ccds, unsigned int *ccxs,
             *cores_per_ccx = (8 - count_set_bits(*core_disable_map & 0xff)) / 2;
             *ccds = count_set_bits(ccd_enable_map);
             *ccxs = *cores == *cores_per_ccx ? 1 : *ccds * 2;
-            *enabled_cores_count = 8*(*ccds) - count_set_bits(~*core_disable_map);
+            *enabled_cores_count = 8*(*ccds) - count_set_bits(*core_disable_map);
             break;
     }
 }
