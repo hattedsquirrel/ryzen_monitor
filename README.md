@@ -1,7 +1,7 @@
 # ryzen_monitor
 Monitor power information of Ryzen processors via the PM table of the SMU.
 
-This tool is based on the [ryzen_smu](https://gitlab.com/leogx9r/ryzen_smu) kernel module for reading the PM Table from the SMU.
+This tool is based on the [ryzen_smu](https://gitlab.com/leogx9r/ryzen_smu) kernel module for reading the PM Table from the SMU. It is a continuation of the demo-tool provided with that project.
 
 **ryzen_monitor** features support for multiple PM table versions (i.e. multiple bios versions), adds support for Ryzen 5000, and presents more fields to user. It is especially focused around providing a more realistic image of the actual power draw and hence true thermal output of the CPU package.
 
@@ -24,3 +24,10 @@ make
 sudo ./src/ryzen_monitor
 ```
 Enjoy!
+
+## Quality of information
+Don't rely on the information given by this tool.
+
+To my knowledge there is no official documentation on how to do this. Everything was created by starring at numbers, a lot of guesswork and finding fragments somewhere on the web. It is highly likely that some assignments or calculations will be incorrect.
+
+This program is provided as is. If anything, it is a toy for the curious. Nothing more.
