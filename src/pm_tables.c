@@ -242,7 +242,8 @@ void pm_table_0x380804(pm_table *pmt, void* base_addr) {
     assign_pm_elements_2(pmt->L3_EDC_LIMIT     , 541, 542);
     assign_pm_elements_2(pmt->L3_EDC_CAC       , 543, 544);
     assign_pm_elements_2(pmt->L3_EDC_RESIDENCY , 545, 546);
-
+    //6 unkown values to follow. Might have to do with L3 because there are 
+    //only 3 values left for units with one L3 cache.
     //[2] //z
     //[2] //(s)(1)
     //[2] //c 21->31
@@ -600,10 +601,10 @@ void pm_table_0x240803(pm_table *pmt, void* base_addr) {
     assign_pm_elements_16_consec(pmt->CORE_CI_FDD      , 323);
     assign_pm_elements_16_consec(pmt->CORE_IRM         , 339);
     assign_pm_elements_16_consec(pmt->CORE_PSTATE      , 355);
-    //assign_pm_elements_8_consec(pmt->CORE_FREQ_LIM_MAX, xxx); //Does not exist.
-    //assign_pm_elements_8_consec(pmt->CORE_FREQ_LIM_MIN, xxx); //Does not exist.
-    assign_pm_elements_16_consec(pmt->CORE_CPPC_MAX    , 371);
-    assign_pm_elements_16_consec(pmt->CORE_CPPC_MIN    , 387);
+    assign_pm_elements_16_consec(pmt->CORE_FREQ_LIM_MAX, 371);
+    assign_pm_elements_16_consec(pmt->CORE_FREQ_LIM_MIN, 387);
+    //assign_pm_elements_16_consec(pmt->CORE_CPPC_MAX    , 371); //Does not exist.
+    //assign_pm_elements_16_consec(pmt->CORE_CPPC_MIN    , 387); //Does not exist.
     assign_pm_elements_16_consec(pmt->CORE_SC_LIMIT    , 403);
     assign_pm_elements_16_consec(pmt->CORE_SC_CAC      , 419);
     assign_pm_elements_16_consec(pmt->CORE_SC_RESIDENCY, 435);
