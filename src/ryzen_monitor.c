@@ -274,16 +274,25 @@ void print_line(const char* label, const char* value_format, ...) {
 #define pmta0(elem) ((pmt.elem)?(*pmt.elem):0)
 
 void start_pm_monitor(int force) {
-    float core_voltage, core_frequency, package_sleep_time, core_sleep_time, edc_value, average_voltage;
-    float peak_core_frequency, peak_core_temp, peak_core_voltage;
-    float total_core_voltage, total_core_power, total_usage, total_core_CC6;
-    float l3_logic_power, l3_vddm_power;
-    const char* name, *codename, *smu_fw_ver;
-    unsigned int cores, ccds, ccxs, cores_per_ccx, core_disable_map, enabled_cores_count=0;
-    unsigned int if_ver, i;
-    int core_disabled, core_renumber;
+    //general
+    int i, j;
     unsigned char *pm_buf;
     pm_table pmt;
+    //system info
+    const char* name, *codename, *smu_fw_ver;
+    unsigned int cores, ccds, ccxs, cores_per_ccx, core_disable_map, enabled_cores_count=0;
+    unsigned int if_ver;
+    //core block
+    float core_voltage, core_frequency, package_sleep_time, core_sleep_time, average_voltage;
+    float peak_core_frequency, peak_core_temp, peak_core_voltage;
+    float total_core_voltage, total_core_power, total_usage, total_core_CC6;
+    int core_disabled, core_number;
+    //constraints block
+    float edc_value;
+    //power block
+    float l3_logic_power, l3_vddm_power;
+    char strbuf[100];
+
 
     if (!smu_pm_tables_supported(&obj)) {
         fprintf(stderr, "PM Tables are not supported on this platform.\n");
@@ -364,7 +373,7 @@ void start_pm_monitor(int force) {
 
         peak_core_frequency = peak_core_temp = peak_core_voltage = 0;
         total_core_voltage = total_core_power = total_usage = total_core_CC6 = 0;
-        core_renumber = 0;
+        core_number = 0;
 
         package_sleep_time = pmta(PC6) / 100.f;
         average_voltage = (pmta(CPU_TELEMETRY_VOLTAGE) - (0.2 * package_sleep_time)) / (1.0 - package_sleep_time);
@@ -384,7 +393,7 @@ void start_pm_monitor(int force) {
                 if (show_disabled_cores)
                       fprintf(stdout,
                           "│ %*s %d │   Disabled | %6.3f W | %5.3f V | %6.2f C | C0: %5.1f %% | C1: %5.1f %% | C6: %5.1f %% │\n",
-                        (i<10)+4, "Core", i,
+                        (core_number<10)+4, "Core", core_number, //Print "Core" and its number but right-justified
                            pmta(CORE_POWER[i]), core_voltage, pmta(CORE_TEMP[i]),
                            pmta(CORE_C0[i]), pmta(CORE_CC1[i]), pmta(CORE_CC6[i]));
             }
@@ -393,21 +402,21 @@ void start_pm_monitor(int force) {
                 // Source: Ryzen Master
                    fprintf(stdout,
                        "│ %*s %d │   %4.f MHz | %6.3f W | %5.3f V | %6.2f C | C0: %5.1f %% | C1: %5.1f %% | C6: %5.1f %% │\n",
-                    (core_renumber<10)+4, "Core", core_renumber,
+                    (core_number<10)+4, "Core", core_number, //Print "Core" and its number but right-justified
                     core_frequency, pmta(CORE_POWER[i]), core_voltage, pmta(CORE_TEMP[i]),
                        pmta(CORE_C0[i]), pmta(CORE_CC1[i]), pmta(CORE_CC6[i]));
                }
                else {
                    fprintf(stdout,
                        "│ %*s %d │   Sleeping | %6.3f W | %5.3f V | %6.2f C | C0: %5.1f %% | C1: %5.1f %% | C6: %5.1f %% │\n",
-                    (core_renumber<10)+4, "Core", core_renumber,
+                    (core_number<10)+4, "Core", core_number, //Print "Core" and its number but right-justified
                        pmta(CORE_POWER[i]), core_voltage, pmta(CORE_TEMP[i]),
                        pmta(CORE_C0[i]), pmta(CORE_CC1[i]), pmta(CORE_CC6[i]));
             }
 
             //Don't confuse people by numbering cores that are disabled and hence not shown on 6 | 12 core CPUs
             //(which actually have 8 | 16 cores)
-            if (show_disabled_cores || !core_disabled) core_renumber++;
+            if (show_disabled_cores || !core_disabled) core_number++;
 
             //Statistics
             if (!core_disabled) {
@@ -471,43 +480,44 @@ void start_pm_monitor(int force) {
         //These powers are drawn via VDDCR_SOC and VDDCR_CPU and thus are pulled from the CPU power connector of the mainboard
         print_line("Total Core Power Sum", "%7.4f W", total_core_power);
         //print_line("VDDCR_CPU Power", "%7.4f W", pmta(VDDCR_CPU_POWER)); //This value doesn't correlate with what the cores
-                                                                          //report, nor woth what is actually consumed. but is
+                                                                          //report, nor with what is actually consumed. but is
                                                                           //the value HWiNFO shows.
         print_line("VDDCR_SOC Power", "%7.4f W", pmta(VDDCR_SOC_POWER));
         print_line("GMI2_VDDG Power", "%7.4f W", pmta(GMI2_VDDG_POWER));
-        l3_logic_power=NAN;
-        l3_vddm_power=NAN;
-        if (pmt.max_l3 <= 1) {
-            l3_logic_power = pmta0(L3_LOGIC_POWER[0]);
-            l3_vddm_power = pmta0(L3_VDDM_POWER[0]);
+
+        //L3 caches (2 per CCD on Zen2, 1 per CCD on Zen3)
+        l3_logic_power=0;
+        l3_vddm_power=0;
+        for (i=0; i<pmt.max_l3; i++) {
+            l3_logic_power += pmta0(L3_LOGIC_POWER[i]);
+            l3_vddm_power += pmta0(L3_VDDM_POWER[i]);
+        }
+        if (pmt.max_l3 == 1) {
             print_line("L3 Logic Power", "%7.4f W", pmta(L3_LOGIC_POWER[0]));
             print_line("L3 VDDM Power", "%7.4f W", pmta(L3_VDDM_POWER[0]));
-        }
-        else if (pmt.max_l3 <= 2) {
-            l3_logic_power = pmta0(L3_LOGIC_POWER[0]) + pmta0(L3_LOGIC_POWER[1]);
-            l3_vddm_power = pmta0(L3_VDDM_POWER[0]) + pmta0(L3_VDDM_POWER[1]);
-            print_line("L3 Logic Power", "%7.3f W + %7.4f W = %7.4f W",
-                    pmta(L3_LOGIC_POWER[0]), pmta(L3_LOGIC_POWER[1]),
-                    l3_logic_power);
-            print_line("L3 VDDM Power", "%7.3f W + %7.4f W = %7.4f W",
-                    pmta(L3_VDDM_POWER[0]), pmta(L3_VDDM_POWER[1]),
-                    l3_vddm_power);
-        }
-        else {
-            l3_logic_power = pmta0(L3_LOGIC_POWER[0]) + pmta0(L3_LOGIC_POWER[1])
-                           + pmta0(L3_LOGIC_POWER[2]) + pmta0(L3_LOGIC_POWER[3]);
-            l3_vddm_power = pmta0(L3_VDDM_POWER[0]) + pmta0(L3_VDDM_POWER[1])
-                          + pmta0(L3_VDDM_POWER[2]) + pmta0(L3_VDDM_POWER[3]);
-            print_line("L3 Logic Power",   "%7.3f W + %7.4f W            ",
-                    pmta(L3_LOGIC_POWER[0]), pmta(L3_LOGIC_POWER[1]));
-            print_line("L3 Logic Power", "+ %7.3f W + %7.4f W = %7.4f W",
-                    pmta(L3_LOGIC_POWER[2]), pmta(L3_LOGIC_POWER[3]),
-                    l3_logic_power);
-            print_line("L3 VDDM Power",    "%7.3f W + %7.4f W            ",
-                    pmta(L3_VDDM_POWER[0]), pmta(L3_VDDM_POWER[1]));
-            print_line("L3 VDDM Power",  "+ %7.3f W + %7.4f W = %7.4f W",
-                    pmta(L3_VDDM_POWER[2]), pmta(L3_VDDM_POWER[3]),
-                    l3_vddm_power);
+        } else {
+            for (i=0; i<pmt.max_l3; i+=2) {
+                // + sign if needed and first value
+                j = snprintf(strbuf, sizeof(strbuf), "%s%7.3f W", (i?"+ ":""), pmta(L3_LOGIC_POWER[i]));
+                // second value if it exists
+                if (pmt.max_l3-i > 1) j += snprintf(strbuf+j, sizeof(strbuf)-j, " + %7.3f W", pmta(L3_LOGIC_POWER[i+1]));
+                // end of string (sum or nothing)
+                if (pmt.max_l3-i > 2) j += snprintf(strbuf+j, sizeof(strbuf)-j, "            ");
+                else j += snprintf(strbuf+j, sizeof(strbuf)-j, " = %7.4f W", l3_logic_power);
+                // print
+                print_line((i?"":"L3 Logic Power"), "%s", strbuf);
+            }
+            for (i=0; i<pmt.max_l3; i+=2) {
+                // + sign if needed and first value
+                j = snprintf(strbuf, sizeof(strbuf), "%s%7.3f W", (i?"+ ":""), pmta(L3_VDDM_POWER[i]));
+                // second value if it exists
+                if (pmt.max_l3-i > 1) j += snprintf(strbuf+j, sizeof(strbuf)-j, " + %7.3f W", pmta(L3_VDDM_POWER[i+1]));
+                // end of string (sum or nothing)
+                if (pmt.max_l3-i > 2) j += snprintf(strbuf+j, sizeof(strbuf)-j, "            ");
+                else j += snprintf(strbuf+j, sizeof(strbuf)-j, " = %7.4f W", l3_logic_power);
+                // print
+                print_line((i?"":"L3 VDDM Power"), "%s", strbuf);
+            }
         }
 
         //These powers are supplied by other power lines to the CPU and are drawn from the 24 pin ATX connector on most boards
