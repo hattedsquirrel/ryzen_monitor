@@ -188,6 +188,7 @@ typedef struct {
     float *L3_EDC_RESIDENCY[PMT_MAX_NUM_L3];
 } pm_table;
 
+void pm_table_0x380904(pm_table *pmt, void* base_addr);
 void pm_table_0x380804(pm_table *pmt, void* base_addr);
 void pm_table_0x240903(pm_table *pmt, void* base_addr);
 void pm_table_0x240803(pm_table *pmt, void* base_addr);

@@ -303,7 +303,8 @@ void start_pm_monitor(int force) {
     //Select matching PM Table
     //ToDo: implement "force" table version
     switch(obj.pm_table_version) {
-        case 0x380804: pm_table_0x380804(&pmt, pm_buf); break; //Ryzen 5900X
+        case 0x380904: pm_table_0x380904(&pmt, pm_buf); break; //Ryzen 5600X
+        case 0x380804: pm_table_0x380804(&pmt, pm_buf); break; //Ryzen 5900X / 5950X
         case 0x240903: pm_table_0x240903(&pmt, pm_buf); break; //Ryzen 3700X / 3800X
         case 0x240803: pm_table_0x240803(&pmt, pm_buf); break; //Ryzen 3950X
         default:
