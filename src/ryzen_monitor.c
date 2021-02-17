@@ -438,7 +438,7 @@ void start_pm_monitor(int force) {
         print_line("Highest Core Voltage", "%8.3f V", peak_core_voltage);
         print_line("Average Core Voltage", "%5.3f V", total_core_voltage/enabled_cores_count);
         print_line("Average Core CC6", "%6.2f %%", total_core_CC6/enabled_cores_count);
-        print_line("Total Core Power Sum", "%7.4f W", total_core_power);
+        print_line("Total Core Power Sum", "%7.3f W", total_core_power);
 
         fprintf(stdout, "├── Reported by SMU ────────────────────────────┼────────────────────────────────────────────────┤\n");
         //print_line("Package Power", "%8.3f W", pmta(SOCKET_POWER)); //Is listed below in power section
@@ -469,8 +469,8 @@ void start_pm_monitor(int force) {
         print_line("Fabric Clock", "%5.f MHz", pmta(FCLK_FREQ));
         print_line("Uncore Clock", "%5.f MHz", pmta(UCLK_FREQ));
         print_line("Memory Clock", "%5.f MHz", pmta(MEMCLK_FREQ));
-        //print_line("VDDCR_Mem", "%7.4f W", pmta(VDDIO_MEM_POWER)); //Is listed below in power section
-        //print_line("VDDCR_SoC", "%7.4f V", pmta(SOC_SET_VOLTAGE)); //Might be the default voltage, not the actually set one
+        //print_line("VDDCR_Mem", "%7.3f W", pmta(VDDIO_MEM_POWER)); //Is listed below in power section
+        //print_line("VDDCR_SoC", "%7.3f V", pmta(SOC_SET_VOLTAGE)); //Might be the default voltage, not the actually set one
         print_line("cLDO_VDDM", "%7.4f V", pmta(V_VDDM));
         print_line("cLDO_VDDP", "%7.4f V", pmta(V_VDDP));
         print_line("cLDO_VDDG", "%7.4f V", pmta(V_VDDG));
@@ -478,12 +478,12 @@ void start_pm_monitor(int force) {
 
         fprintf(stdout, "╭── Power Consumption ──────────────────────────┬────────────────────────────────────────────────╮\n");
         //These powers are drawn via VDDCR_SOC and VDDCR_CPU and thus are pulled from the CPU power connector of the mainboard
-        print_line("Total Core Power Sum", "%7.4f W", total_core_power);
-        //print_line("VDDCR_CPU Power", "%7.4f W", pmta(VDDCR_CPU_POWER)); //This value doesn't correlate with what the cores
+        print_line("Total Core Power Sum", "%7.3f W", total_core_power);
+        //print_line("VDDCR_CPU Power", "%7.3f W", pmta(VDDCR_CPU_POWER)); //This value doesn't correlate with what the cores
                                                                           //report, nor with what is actually consumed. but is
                                                                           //the value HWiNFO shows.
-        print_line("VDDCR_SOC Power", "%7.4f W", pmta(VDDCR_SOC_POWER));
-        print_line("GMI2_VDDG Power", "%7.4f W", pmta(GMI2_VDDG_POWER));
+        print_line("VDDCR_SOC Power", "%7.3f W", pmta(VDDCR_SOC_POWER));
+        print_line("GMI2_VDDG Power", "%7.3f W", pmta(GMI2_VDDG_POWER));
 
         //L3 caches (2 per CCD on Zen2, 1 per CCD on Zen3)
         l3_logic_power=0;
@@ -493,8 +493,8 @@ void start_pm_monitor(int force) {
             l3_vddm_power += pmta0(L3_VDDM_POWER[i]);
         }
         if (pmt.max_l3 == 1) {
-            print_line("L3 Logic Power", "%7.4f W", pmta(L3_LOGIC_POWER[0]));
-            print_line("L3 VDDM Power", "%7.4f W", pmta(L3_VDDM_POWER[0]));
+            print_line("L3 Logic Power", "%7.3f W", pmta(L3_LOGIC_POWER[0]));
+            print_line("L3 VDDM Power", "%7.3f W", pmta(L3_VDDM_POWER[0]));
         } else {
             for (i=0; i<pmt.max_l3; i+=2) {
                 // + sign if needed and first value
@@ -503,7 +503,7 @@ void start_pm_monitor(int force) {
                 if (pmt.max_l3-i > 1) j += snprintf(strbuf+j, sizeof(strbuf)-j, " + %7.3f W", pmta(L3_LOGIC_POWER[i+1]));
                 // end of string (sum or nothing)
                 if (pmt.max_l3-i > 2) j += snprintf(strbuf+j, sizeof(strbuf)-j, "            ");
-                else j += snprintf(strbuf+j, sizeof(strbuf)-j, " = %7.4f W", l3_logic_power);
+                else j += snprintf(strbuf+j, sizeof(strbuf)-j, " = %7.3f W", l3_logic_power);
                 // print
                 print_line((i?"":"L3 Logic Power"), "%s", strbuf);
             }
@@ -514,7 +514,7 @@ void start_pm_monitor(int force) {
                 if (pmt.max_l3-i > 1) j += snprintf(strbuf+j, sizeof(strbuf)-j, " + %7.3f W", pmta(L3_VDDM_POWER[i+1]));
                 // end of string (sum or nothing)
                 if (pmt.max_l3-i > 2) j += snprintf(strbuf+j, sizeof(strbuf)-j, "            ");
-                else j += snprintf(strbuf+j, sizeof(strbuf)-j, " = %7.4f W", l3_logic_power);
+                else j += snprintf(strbuf+j, sizeof(strbuf)-j, " = %7.3f W", l3_vddm_power);
                 // print
                 print_line((i?"":"L3 VDDM Power"), "%s", strbuf);
             }
@@ -522,15 +522,15 @@ void start_pm_monitor(int force) {
 
         //These powers are supplied by other power lines to the CPU and are drawn from the 24 pin ATX connector on most boards
         print_line("","");
-        print_line("VDDIO_MEM Power", "%7.4f W", pmta(VDDIO_MEM_POWER));
-        print_line("IOD_VDDIO_MEM Power", "%7.4f W", pmta(IOD_VDDIO_MEM_POWER));
-        print_line("DDR_VDDP Power", "%7.4f W", pmta(DDR_VDDP_POWER));
-        print_line("VDD18 Power", "%7.4f W", pmta(VDD18_POWER)); //Same as pmta(IO_VDD18_POWER)
+        print_line("VDDIO_MEM Power", "%7.3f W", pmta(VDDIO_MEM_POWER));
+        print_line("IOD_VDDIO_MEM Power", "%7.3f W", pmta(IOD_VDDIO_MEM_POWER));
+        print_line("DDR_VDDP Power", "%7.3f W", pmta(DDR_VDDP_POWER));
+        print_line("VDD18 Power", "%7.3f W", pmta(VDD18_POWER)); //Same as pmta(IO_VDD18_POWER)
 
         //The sum is the thermal output of the whole package. Yes, this is higher than PPT and SOCKET_POWER.
         //Confirmed by measuring the actual current draw on the mainboard.
         print_line("","");
-        print_line("Calculated Thermal Output", "%7.4f W", total_core_power + pmta0(VDDCR_SOC_POWER) + pmta0(GMI2_VDDG_POWER) 
+        print_line("Calculated Thermal Output", "%7.3f W", total_core_power + pmta0(VDDCR_SOC_POWER) + pmta0(GMI2_VDDG_POWER) 
                 + l3_logic_power + l3_vddm_power
                 + pmta0(VDDIO_MEM_POWER) + pmta0(IOD_VDDIO_MEM_POWER) + pmta0(DDR_VDDP_POWER) + pmta0(VDD18_POWER));
 
@@ -539,8 +539,8 @@ void start_pm_monitor(int force) {
         print_line("SoC Power (SVI2)", "%8.3f V | %7.3f A | %8.3f W", pmta(SOC_TELEMETRY_VOLTAGE), pmta(SOC_TELEMETRY_CURRENT), pmta(SOC_TELEMETRY_POWER));
         print_line("Core Power (SVI2)", "%8.3f V | %7.3f A | %8.3f W", pmta(CPU_TELEMETRY_VOLTAGE), pmta(CPU_TELEMETRY_CURRENT), pmta(CPU_TELEMETRY_POWER));
         print_line("Core Power (SMU)", "%7.3f W", pmta(VDDCR_CPU_POWER));
-        print_line("Socket Power (SMU)", "%7.4f W", pmta(SOCKET_POWER));
-        if (pmt.PACKAGE_POWER) print_line("Package Power (SMU)", "%7.4f W", pmta(PACKAGE_POWER));
+        print_line("Socket Power (SMU)", "%7.3f W", pmta(SOCKET_POWER));
+        if (pmt.PACKAGE_POWER) print_line("Package Power (SMU)", "%7.3f W", pmta(PACKAGE_POWER));
         fprintf(stdout, "╰───────────────────────────────────────────────┴────────────────────────────────────────────────╯\n");
 
 
