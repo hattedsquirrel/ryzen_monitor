@@ -21,6 +21,7 @@
 #define READINFO_H
 
 typedef struct {
+    char available;
     const char *cpu_name;
     const char *codename;
     const char *smu_fw_ver;

@@ -160,6 +160,7 @@ unsigned int get_processor_topology(system_info *sysinfo, unsigned int zen_versi
             sysinfo->enabled_cores_count = 8*(sysinfo->ccds) - count_set_bits(sysinfo->core_disable_map);
             break;
     }
+    sysinfo->available=1;
 }
 
 void print_memory_timings() {

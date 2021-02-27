@@ -2,6 +2,7 @@
  * Ryzen SMU Userspace Sensor Monitor
  * Copyright (C) 2020-2021
  *    Florian Huehn <hattedsquirrel@gmail.com> (https://hattedsquirrel.net)
+ *    Based on work of:
  *    Leonardo Gates <leogatesx9r@protonmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -36,7 +37,7 @@
 #include "readinfo.h"
 #include "pm_tables.h"
 
-#define PROGRAM_VERSION "1.0.2"
+#define PROGRAM_VERSION "1.0.3"
 
 smu_obj_t obj;
 static int update_time_s = 1;
@@ -74,22 +75,22 @@ void draw_screen(pm_table *pmt, system_info *sysinfo) {
     float l3_logic_power, l3_vddm_power;
     char strbuf[100];
 
-    fprintf(stdout, "\e[1;1H\e[2J"); //Move cursor to (1,1); Clear entire screen
-
-    fprintf(stdout, "╭───────────────────────────────────────────────┬────────────────────────────────────────────────╮\n");
-    print_line("CPU Model", sysinfo->cpu_name);
-    print_line("Processor Code Name", sysinfo->codename);
-    print_line("Cores", "%d", sysinfo->cores);
-    print_line("Core CCDs", "%d", sysinfo->ccds);
-    if (pmt->zen_version!=3) {
-        print_line("Core CCXs", "%d", sysinfo->ccxs);
-        print_line("Cores Per CCX", "%d", sysinfo->cores_per_ccx);
+    if (sysinfo->available) {
+        fprintf(stdout, "╭───────────────────────────────────────────────┬────────────────────────────────────────────────╮\n");
+        print_line("CPU Model", sysinfo->cpu_name);
+        print_line("Processor Code Name", sysinfo->codename);
+        print_line("Cores", "%d", sysinfo->cores);
+        print_line("Core CCDs", "%d", sysinfo->ccds);
+        if (pmt->zen_version!=3) {
+            print_line("Core CCXs", "%d", sysinfo->ccxs);
+            print_line("Cores Per CCX", "%d", sysinfo->cores_per_ccx);
+        }
+        else
+            print_line("Cores Per CCD", "%d", sysinfo->cores_per_ccx); //Zen3 does not have CCXs anymore
+        print_line("SMU FW Version", "v%s", sysinfo->smu_fw_ver);
+        print_line("MP1 IF Version", "v%d", sysinfo->if_ver);
+        fprintf(stdout, "╰───────────────────────────────────────────────┴────────────────────────────────────────────────╯\n");
     }
-    else
-        print_line("Cores Per CCD", "%d", sysinfo->cores_per_ccx); //Zen3 does not have CCXs anymore
-    print_line("SMU FW Version", "v%s", sysinfo->smu_fw_ver);
-    print_line("MP1 IF Version", "v%d", sysinfo->if_ver);
-    fprintf(stdout, "╰───────────────────────────────────────────────┴────────────────────────────────────────────────╯\n");
 
 
     peak_core_frequency = peak_core_temp = peak_core_voltage = 0;
@@ -263,12 +264,6 @@ void draw_screen(pm_table *pmt, system_info *sysinfo) {
     print_line("Socket Power (SMU)", "%7.3f W", pmta(SOCKET_POWER));
     if (pmt->PACKAGE_POWER) print_line("Package Power (SMU)", "%7.3f W", pmta(PACKAGE_POWER));
     fprintf(stdout, "╰───────────────────────────────────────────────┴────────────────────────────────────────────────╯\n");
-
-
-    // Hide Cursor
-    fprintf(stdout, "\e[?25l");
-
-    fflush(stdout);
 }
 
 int select_pm_table_version(unsigned int version, pm_table *pmt, unsigned char *pm_buf) {
@@ -277,7 +272,7 @@ int select_pm_table_version(unsigned int version, pm_table *pmt, unsigned char *
     memset(pmt, 0, sizeof(pmt));
 
      //Select matching PM Table
-    switch(obj.pm_table_version) {
+    switch(version) {
         case 0x380904: pm_table_0x380904(pmt, pm_buf); break; //Ryzen 5600X
         case 0x380804: pm_table_0x380804(pmt, pm_buf); break; //Ryzen 5900X / 5950X
         case 0x240903: pm_table_0x240903(pmt, pm_buf); break; //Ryzen 3700X / 3800X
@@ -294,7 +289,6 @@ int select_pm_table_version(unsigned int version, pm_table *pmt, unsigned char *
 }
 
 void start_pm_monitor(unsigned int force) {
-    int i, j;
     unsigned char *pm_buf;
     pm_table pmt;
     system_info sysinfo;
@@ -348,9 +342,55 @@ void start_pm_monitor(unsigned int force) {
         if (smu_read_pm_table(&obj, pm_buf, obj.pm_table_size) != SMU_Return_OK)
             continue;
 
+        fprintf(stdout, "\e[1;1H\e[2J"); //Move cursor to (1,1); Clear entire screen
         draw_screen(&pmt, &sysinfo);
+        fprintf(stdout, "\e[?25l"); // Hide Cursor
+        fflush(stdout);
+
         sleep(update_time_s);
     }
+}
+
+void read_from_dumpfile(char *dumpfile, unsigned int version) {
+    unsigned char readbuf[10240];
+    unsigned int bytes_read;
+    pm_table pmt;
+    system_info sysinfo;
+    FILE *fd;
+
+    if (!version) {
+        fprintf(stderr, "You need to specify a PM Table version with -f.\n");
+        exit(0);
+    }
+
+    //Read file
+    fd = fopen(dumpfile, "rb");
+    if(!fd) {
+        fprintf(stderr, "Could not read the dumpfile (\"%s\").\n", dumpfile);
+        exit(0);
+    }
+    bytes_read=fread(readbuf,sizeof(char),sizeof(readbuf),fd);
+    fclose(fd);
+
+    //Select matching PM Table
+    if(!select_pm_table_version(version, &pmt, readbuf)) {
+        fprintf(stderr, "This PM Table version (0x%x) is currently not supported.\n", version);
+        exit(0);
+    }
+    else fprintf(stderr, "Using PM Table version 0x%x.\n", version);
+
+    //Prevent illegal memory access
+    if (bytes_read < pmt.min_size) {
+        fprintf(stderr, "Read %d bytes from \"%s\", but the selected PM Table is %d bytes long.\n", bytes_read, dumpfile, pmt.min_size);
+        exit(0);
+    }
+    
+    sysinfo.available=0; //Did not read sysinfo
+    sysinfo.enabled_cores_count = pmt.max_cores;
+    sysinfo.core_disable_map=0;
+    sysinfo.cores=sysinfo.enabled_cores_count;
+
+    draw_screen(&pmt, &sysinfo);
 }
 
 void print_version() {
@@ -365,53 +405,15 @@ void show_help(char* program) {
         "Usage: %s <option(s)>\n\n"
 
         "Options:\n"
-            "\t-h          - Show this help screen.\n"
-            "\t-v          - Show program version.\n"
-            "\t-m          - Print DRAM Timings and exit.\n"
-//            "\t-f          - Force PM table monitoring even if the PM table version is not supported.\n"
-            "\t-d          - Show disabled cores.\n"
-            "\t-u<seconds> - Update the monitoring only after this number of second(s) have passed. Defaults to 1.\n",
+            "\t-h            - Show this help screen.\n"
+            "\t-v            - Show program version.\n"
+            "\t-m            - Print DRAM Timings and exit.\n"
+            "\t-d            - Show disabled cores.\n"
+            "\t-u<seconds>   - Update the monitoring only after this number of second(s) have passed. Defaults to 1.\n"
+            "\t-f<hex-value> - Force to use a specific PM table version.\n"
+            "\t-t<filename>  - Test mode. Read PM Table from raw-dumfile. Use in conjunction with -f\n",
         program
     );
-}
-
-void parse_args(int argc, char** argv) {
-    int c = 0, force, core;
-
-    core = 0;
-    force = 0;
-
-    while ((c = getopt(argc, argv, "vmd::fu:h")) != -1) {
-        switch (c) {
-            case 'v':
-                print_version();
-                exit(0);
-            case 'm':
-                print_memory_timings();
-                exit(0);
-            case 'd':
-                if (optarg)
-                    show_disabled_cores = atoi(optarg);
-                else
-                    show_disabled_cores = 1;
-                break;
-            case 'f':
-                force = 1;
-                break;
-            case 'u':
-                update_time_s = atoi(optarg);
-                break;
-            case 'h':
-                show_help(argv[0]);
-                exit(0);
-            case '?':
-                exit(0);
-            default:
-                break;
-        }
-    }
-
-    start_pm_monitor(force);
 }
 
 void signal_interrupt(int sig) {
@@ -429,7 +431,10 @@ void signal_interrupt(int sig) {
 
 int main(int argc, char** argv) {
     smu_return_val ret;
+    int c=0, force=0, core=0;
+    char *dumpfile=0;
 
+    //Set up signal handlers
     if ((signal(SIGABRT, signal_interrupt) == SIG_ERR) ||
         (signal(SIGTERM, signal_interrupt) == SIG_ERR) ||
         (signal(SIGINT, signal_interrupt) == SIG_ERR)) {
@@ -437,18 +442,64 @@ int main(int argc, char** argv) {
         exit(-1);
     }
 
-    if (getuid() != 0 && geteuid() != 0) {
-        fprintf(stderr, "Program must be run as root.\n");
-        exit(-2);
+    //Parse arguments
+    while ((c = getopt(argc, argv, "vmd::f:t:u:h")) != -1) {
+        switch (c) {
+            case 'v':
+                print_version();
+                exit(0);
+            case 'm':
+                print_memory_timings();
+                exit(0);
+            case 'd':
+                if (optarg)
+                    show_disabled_cores = atoi(optarg);
+                else
+                    show_disabled_cores = 1;
+                break;
+            case 'f':
+                if(!optarg || sscanf(optarg,"%x", &force)!=1) {
+                    show_help(argv[0]);
+                    exit(0);
+                }
+                break;
+            case 't':
+                if(!optarg || strlen(optarg)==0) {
+                    show_help(argv[0]);
+                    exit(0);
+                }
+                dumpfile=optarg;
+                break;
+            case 'u':
+                update_time_s = atoi(optarg);
+                break;
+            case 'h':
+                show_help(argv[0]);
+                exit(0);
+            case '?':
+                exit(0);
+            default:
+                break;
+        }
     }
 
-    ret = smu_init(&obj);
-    if (ret != SMU_Return_OK) {
-        fprintf(stderr, "%s\n", smu_return_to_str(ret));
-        exit(-2);
-    }
+    if(dumpfile)
+        read_from_dumpfile(dumpfile, force);
+    else
+    {
+        if (getuid() != 0 && geteuid() != 0) {
+            fprintf(stderr, "Program must be run as root.\n");
+            exit(-2);
+        }
 
-    parse_args(argc, argv);
+        ret = smu_init(&obj);
+        if (ret != SMU_Return_OK) {
+            fprintf(stderr, "%s\n", smu_return_to_str(ret));
+            exit(-2);
+        }
+
+        start_pm_monitor(force);
+    }
 
     return 0;
 }
