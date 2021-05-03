@@ -172,8 +172,8 @@ void pm_table_0x380804(pm_table *pmt, void* base_addr) {
     pmt->DETERMINISM         = pm_element(135);
     pmt->V_VDDM              = pm_element(136);
     pmt->V_VDDP              = pm_element(137);
-    pmt->V_VDDG              = pm_element(138);
-    pmt->V_unk1              = pm_element(139);
+    pmt->V_VDDG_IOD          = pm_element(138);
+    pmt->V_VDDG_CCD          = pm_element(139);
 
     pmt->PEAK_TEMP      = pm_element(140); //o
     pmt->PEAK_VOLTAGE   = pm_element(141); //o
@@ -364,8 +364,8 @@ void pm_table_0x380904(pm_table *pmt, void* base_addr) {
 	pmt->DETERMINISM =                  pm_element(135);
 	pmt->V_VDDM =                       pm_element(136);
 	pmt->V_VDDP =                       pm_element(137);
-	pmt->V_VDDG =                       pm_element(138);
-	pmt->V_unk1 =                       pm_element(139);
+	pmt->V_VDDG_IOD =                   pm_element(138);
+	pmt->V_VDDG_CCD =                   pm_element(139);
 	pmt->PEAK_TEMP =                    pm_element(140); 
 	pmt->PEAK_VOLTAGE =                 pm_element(141); 
 	pmt->unk_power =                    pm_element(142); 

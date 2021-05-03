@@ -195,7 +195,9 @@ void draw_screen(pm_table *pmt, system_info *sysinfo) {
     //print_line("VDDCR_SoC", "%7.3f V", pmta(SOC_SET_VOLTAGE)); //Might be the default voltage, not the actually set one
     print_line("cLDO_VDDM", "%7.4f V", pmta(V_VDDM));
     print_line("cLDO_VDDP", "%7.4f V", pmta(V_VDDP));
-    print_line("cLDO_VDDG", "%7.4f V", pmta(V_VDDG));
+    if(pmt->V_VDDG)     print_line("cLDO_VDDG", "%7.4f V", pmta(V_VDDG));
+    if(pmt->V_VDDG_IOD) print_line("cLDO_VDDG_IOD", "%7.4f V", pmta(V_VDDG_IOD));
+    if(pmt->V_VDDG_CCD) print_line("cLDO_VDDG_CCD", "%7.4f V", pmta(V_VDDG_CCD));
     fprintf(stdout, "╰───────────────────────────────────────────────┴────────────────────────────────────────────────╯\n");
 
     fprintf(stdout, "╭── Power Consumption ──────────────────────────┬────────────────────────────────────────────────╮\n");
@@ -269,7 +271,7 @@ void draw_screen(pm_table *pmt, system_info *sysinfo) {
 int select_pm_table_version(unsigned int version, pm_table *pmt, unsigned char *pm_buf) {
     //Initialize pmt to 0. This also sets all pointers to 0, which signifies non-existiting fields.
     //Access via pmta(...) will check if pointer is 0 before trying to access the value.
-    memset(pmt, 0, sizeof(pmt));
+    memset(pmt, 0, sizeof(pm_table));
 
      //Select matching PM Table
     switch(version) {

@@ -126,7 +126,8 @@ typedef struct {
     float *V_VDDM;
     float *V_VDDP;
     float *V_VDDG;
-    float *V_unk1;
+    float *V_VDDG_IOD;
+    float *V_VDDG_CCD;
     float *PEAK_TEMP;
     float *PEAK_VOLTAGE;
     float *unk_power;
