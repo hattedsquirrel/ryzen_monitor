@@ -146,14 +146,14 @@ void pm_table_0x380804(pm_table *pmt, void* base_addr) {
     assign_pm_elements_4(pmt->MEMCLK_FREQ_TABLE,  82,  83,  84,  85);
     assign_pm_elements_4(pmt->FCLK_VOLTAGE,       86,  87,  88,  89);
 
-    assign_pm_elements_4(pmt->LCLK_SETPOINT,  90,  98, 106, 114);
-    assign_pm_elements_4(pmt->LCLK_BUSY,      91,  99, 107, 115);
-    assign_pm_elements_4(pmt->LCLK_unk1,      92, 100, 108, 116);
-    assign_pm_elements_4(pmt->LCLK_unk2,      93, 101, 109, 117);
-    assign_pm_elements_4(pmt->LCLK_FREQ,      94, 102, 110, 118);
-    assign_pm_elements_4(pmt->LCLK_FREQ_EFF,  95, 103, 111, 119);
-    assign_pm_elements_4(pmt->LCLK_MAX_DPM,   96, 104, 112, 120);
-    assign_pm_elements_4(pmt->LCLK_MIN_DPM,   97, 105, 113, 121);
+    assign_pm_elements_4(pmt->LCLK_SETPOINT,      90,  98, 106, 114);
+    assign_pm_elements_4(pmt->LCLK_BUSY,          91,  99, 107, 115);
+    assign_pm_elements_4(pmt->LCLK_FREQ,          92, 100, 108, 116);
+    assign_pm_elements_4(pmt->LCLK_FREQ_EFF,      93, 101, 109, 117);
+    assign_pm_elements_4(pmt->LCLK_MAX_DPM,       94, 102, 110, 118);
+    assign_pm_elements_4(pmt->LCLK_MIN_DPM,       95, 103, 111, 119);
+    assign_pm_elements_4(pmt->SOCCLK_FREQ_EFF,    96, 104, 112, 120);
+    assign_pm_elements_4(pmt->HUBCLK_FREQ_EFF,    97, 105, 113, 121);
 
     pmt->XGMI_SETPOINT   = pm_element(122);
     pmt->XGMI_BUSY       = pm_element(123);
@@ -277,6 +277,7 @@ void pm_table_0x380904(pm_table *pmt, void* base_addr) {
 	pmt->EDC_VALUE =                    pm_element(9);
 	pmt->VID_LIMIT =                    pm_element(10); 
 	pmt->VID_VALUE =                    pm_element(11); 
+
 	pmt->PPT_WC =                       pm_element(12);
 	pmt->PPT_ACTUAL =                   pm_element(13); 
 	pmt->TDC_WC =                       pm_element(14);
@@ -289,19 +290,22 @@ void pm_table_0x380904(pm_table *pmt, void* base_addr) {
 	pmt->EDC_ACTUAL =                   pm_element(21); 
 	pmt->VID_WC =                       pm_element(22);
 	pmt->VID_ACTUAL =                   pm_element(23); 
-	pmt->VDDCR_CPU_POWER =              pm_element(24); 
+	
+    pmt->VDDCR_CPU_POWER =              pm_element(24); 
 	pmt->VDDCR_SOC_POWER =              pm_element(25); 
 	pmt->VDDIO_MEM_POWER =              pm_element(26); 
 	pmt->VDD18_POWER =                  pm_element(27); 
 	pmt->ROC_POWER =                    pm_element(28); 
 	pmt->SOCKET_POWER =                 pm_element(29); 
-	pmt->PPT_FREQUENCY =                pm_element(30);
+	
+    pmt->PPT_FREQUENCY =                pm_element(30);
 	pmt->TDC_FREQUENCY =                pm_element(31);
 	pmt->THM_FREQUENCY =                pm_element(32);
 	pmt->PROCHOT_FREQUENCY =            pm_element(33);
 	pmt->VOLTAGE_FREQUENCY =            pm_element(34);
 	pmt->CCA_FREQUENCY =                pm_element(35);
-	pmt->FIT_VOLTAGE =                  pm_element(36);
+	
+    pmt->FIT_VOLTAGE =                  pm_element(36);
 	pmt->FIT_PRE_VOLTAGE =              pm_element(37);
 	pmt->LATCHUP_VOLTAGE =              pm_element(38);
 	pmt->CPU_SET_VOLTAGE =              pm_element(39); 
@@ -313,7 +317,8 @@ void pm_table_0x380904(pm_table *pmt, void* base_addr) {
 	pmt->SOC_TELEMETRY_VOLTAGE =        pm_element(45); 
 	pmt->SOC_TELEMETRY_CURRENT =        pm_element(46); 
 	pmt->SOC_TELEMETRY_POWER =          pm_element(47); 
-	pmt->FCLK_FREQ =                    pm_element(48); 
+	
+    pmt->FCLK_FREQ =                    pm_element(48); 
 	pmt->FCLK_FREQ_EFF =                pm_element(49); 
 	pmt->UCLK_FREQ =                    pm_element(50); 
 	pmt->MEMCLK_FREQ =                  pm_element(51); 
@@ -325,7 +330,8 @@ void pm_table_0x380904(pm_table *pmt, void* base_addr) {
 	pmt->FCLK_IOHC_BUSY =               pm_element(57);
 	pmt->FCLK_XGMI_SETPOINT =           pm_element(58);
 	pmt->FCLK_XGMI_BUSY =               pm_element(59);
-	pmt->CCM_READS =                    pm_element(60);
+	
+    pmt->CCM_READS =                    pm_element(60);
 	pmt->CCM_WRITES =                   pm_element(61);
 	pmt->IOMS =                         pm_element(62);
 	pmt->XGMI =                         pm_element(63);
@@ -335,23 +341,26 @@ void pm_table_0x380904(pm_table *pmt, void* base_addr) {
 	//unknown: 66 .. 69
 	//unknown: 66 .. 69
 	//unknown: 66 .. 69
-	assign_pm_elements_4(pmt->FCLK_RESIDENCY        , 70, 71, 72, 73);
-	assign_pm_elements_4(pmt->FCLK_FREQ_TABLE       , 74, 75, 76, 77);
-	assign_pm_elements_4(pmt->UCLK_FREQ_TABLE       , 78, 79, 80, 81);
-	assign_pm_elements_4(pmt->MEMCLK_FREQ_TABLE     , 82, 83, 84, 85);
-	assign_pm_elements_4(pmt->FCLK_VOLTAGE          , 86, 87, 88, 89);
-	assign_pm_elements_4(pmt->LCLK_SETPOINT         , 90, 91, 92, 93);
-	assign_pm_elements_4(pmt->LCLK_BUSY             , 94, 95, 96, 97);
-	assign_pm_elements_4(pmt->LCLK_unk1             , 98, 99, 100, 101);
-	assign_pm_elements_4(pmt->LCLK_unk2             , 102, 103, 104, 105);
-	assign_pm_elements_4(pmt->LCLK_FREQ             , 106, 107, 108, 109);
-	assign_pm_elements_4(pmt->LCLK_FREQ_EFF         , 110, 111, 112, 113);
-	assign_pm_elements_4(pmt->LCLK_MAX_DPM          , 114, 115, 116, 117);
-	assign_pm_elements_4(pmt->LCLK_MIN_DPM          , 118, 119, 120, 121);
+    assign_pm_elements_4(pmt->FCLK_RESIDENCY,     70,  71,  72,  73);
+    assign_pm_elements_4(pmt->FCLK_FREQ_TABLE,    74,  75,  76,  77);
+    assign_pm_elements_4(pmt->UCLK_FREQ_TABLE,    78,  79,  80,  81);
+    assign_pm_elements_4(pmt->MEMCLK_FREQ_TABLE,  82,  83,  84,  85);
+    assign_pm_elements_4(pmt->FCLK_VOLTAGE,       86,  87,  88,  89);
+
+    assign_pm_elements_4(pmt->LCLK_SETPOINT,      90,  98, 106, 114);
+    assign_pm_elements_4(pmt->LCLK_BUSY,          91,  99, 107, 115);
+    assign_pm_elements_4(pmt->LCLK_FREQ,          92, 100, 108, 116);
+    assign_pm_elements_4(pmt->LCLK_FREQ_EFF,      93, 101, 109, 117);
+    assign_pm_elements_4(pmt->LCLK_MAX_DPM,       94, 102, 110, 118);
+    assign_pm_elements_4(pmt->LCLK_MIN_DPM,       95, 103, 111, 119);
+    assign_pm_elements_4(pmt->SOCCLK_FREQ_EFF,    96, 104, 112, 120);
+    assign_pm_elements_4(pmt->HUBCLK_FREQ_EFF,    97, 105, 113, 121); 
+
 	pmt->XGMI_SETPOINT =                pm_element(122);
 	pmt->XGMI_BUSY =                    pm_element(123);
 	pmt->XGMI_LANE_WIDTH =              pm_element(124);
 	pmt->XGMI_DATA_RATE =               pm_element(125);
+
 	pmt->SOC_POWER =                    pm_element(126); 
 	pmt->SOC_TEMP =                     pm_element(127); 
 	pmt->DDR_VDDP_POWER =               pm_element(128);
@@ -366,7 +375,8 @@ void pm_table_0x380904(pm_table *pmt, void* base_addr) {
 	pmt->V_VDDP =                       pm_element(137);
 	pmt->V_VDDG_IOD =                   pm_element(138);
 	pmt->V_VDDG_CCD =                   pm_element(139);
-	pmt->PEAK_TEMP =                    pm_element(140); 
+	
+    pmt->PEAK_TEMP =                    pm_element(140); 
 	pmt->PEAK_VOLTAGE =                 pm_element(141); 
 	pmt->unk_power =                    pm_element(142); 
 	pmt->AVG_CORE_COUNT =               pm_element(143);
@@ -392,10 +402,12 @@ void pm_table_0x380904(pm_table *pmt, void* base_addr) {
 	pmt->TWIXCLK =                      pm_element(163);
 	pmt->clk_0290 =                     pm_element(164);
 	pmt->WAFLCLK =                      pm_element(165);
-	pmt->DPM_BUSY =                     pm_element(166);
+	
+    pmt->DPM_BUSY =                     pm_element(166);
 	pmt->MP1_BUSY =                     pm_element(167);
 	pmt->MP5_BUSY =                     pm_element(168);
-	assign_pm_elements_8_consec(pmt->CORE_POWER         , 169);
+	
+    assign_pm_elements_8_consec(pmt->CORE_POWER         , 169);
 	assign_pm_elements_8_consec(pmt->CORE_VOLTAGE       , 177);
 	assign_pm_elements_8_consec(pmt->CORE_TEMP          , 185);
 	assign_pm_elements_8_consec(pmt->CORE_FIT           , 193);
@@ -417,7 +429,8 @@ void pm_table_0x380904(pm_table *pmt, void* base_addr) {
 	assign_pm_elements_8_consec(pmt->CORE_SC_LIMIT      , 321);
 	assign_pm_elements_8_consec(pmt->CORE_SC_CAC        , 329);
 	assign_pm_elements_8_consec(pmt->CORE_SC_RESIDENCY  , 337);
-	pmt->L3_LOGIC_POWER[0] =                pm_element(345);
+	
+    pmt->L3_LOGIC_POWER[0] =                pm_element(345);
 	pmt->L3_VDDM_POWER[0] =                 pm_element(346);
 	pmt->L3_TEMP[0] =                       pm_element(347);
 	pmt->L3_FIT[0] =                        pm_element(348);

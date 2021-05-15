@@ -103,12 +103,12 @@ typedef struct {
     float *FCLK_VOLTAGE[4];
     float *LCLK_SETPOINT[4];
     float *LCLK_BUSY[4];
-    float *LCLK_unk1[4];
-    float *LCLK_unk2[4];
     float *LCLK_FREQ[4];
     float *LCLK_FREQ_EFF[4];
     float *LCLK_MAX_DPM[4];
     float *LCLK_MIN_DPM[4];
+    float *SOCCLK_FREQ_EFF[4];
+    float *HUBCLK_FREQ_EFF[4];
     float *XGMI_SETPOINT;
     float *XGMI_BUSY;
     float *XGMI_LANE_WIDTH;
