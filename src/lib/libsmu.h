@@ -24,10 +24,11 @@
 #include <pthread.h>
 
 /* Version the loaded driver must use to be compatible. */
-#define KERNEL_DRIVER_SUPP_VERS_COUNT 2
+#define KERNEL_DRIVER_SUPP_VERS_COUNT 3
 static char kernel_driver_supported_versions[KERNEL_DRIVER_SUPP_VERS_COUNT][10] = {
     "0.1.0",
-    "0.1.1"
+    "0.1.1",
+    "0.1.2"
 };
 
 /**
