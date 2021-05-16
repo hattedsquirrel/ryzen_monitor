@@ -37,7 +37,7 @@
 #include "readinfo.h"
 #include "pm_tables.h"
 
-#define PROGRAM_VERSION "1.0.3"
+#define PROGRAM_VERSION "1.0.4"
 
 smu_obj_t obj;
 static int update_time_s = 1;
@@ -276,7 +276,9 @@ int select_pm_table_version(unsigned int version, pm_table *pmt, unsigned char *
      //Select matching PM Table
     switch(version) {
         case 0x380904: pm_table_0x380904(pmt, pm_buf); break; //Ryzen 5600X
+        case 0x380905: pm_table_0x380905(pmt, pm_buf); break; //Ryzen 5600X
         case 0x380804: pm_table_0x380804(pmt, pm_buf); break; //Ryzen 5900X / 5950X
+        case 0x380805: pm_table_0x380805(pmt, pm_buf); break; //Ryzen 5900X / 5950X
         case 0x240903: pm_table_0x240903(pmt, pm_buf); break; //Ryzen 3700X / 3800X
         case 0x240803: pm_table_0x240803(pmt, pm_buf); break; //Ryzen 3950X
         default:
