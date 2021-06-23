@@ -235,6 +235,6 @@ void print_memory_timings() {
     exit(0);
 
 _READ_ERROR:
-    fprintf(stderr, "Unable to read SMN address space.");
+    fprintf(stderr, "Unable to read SMN address space.\n");
     exit(1);
 }

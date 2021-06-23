@@ -435,7 +435,7 @@ void signal_interrupt(int sig) {
 
 int main(int argc, char** argv) {
     smu_return_val ret;
-    int c=0, force=0, core=0;
+    int c=0, force=0, core=0, printtimings=0;
     char *dumpfile=0;
 
     //Set up signal handlers
@@ -453,8 +453,8 @@ int main(int argc, char** argv) {
                 print_version();
                 exit(0);
             case 'm':
-                print_memory_timings();
-                exit(0);
+                printtimings = 1;
+                break;
             case 'd':
                 if (optarg)
                     show_disabled_cores = atoi(optarg);
@@ -487,7 +487,7 @@ int main(int argc, char** argv) {
         }
     }
 
-    if(dumpfile)
+    if(dumpfile && !printtimings)
         read_from_dumpfile(dumpfile, force);
     else
     {
@@ -502,7 +502,8 @@ int main(int argc, char** argv) {
             exit(-2);
         }
 
-        start_pm_monitor(force);
+        if(printtimings) print_memory_timings();
+        else start_pm_monitor(force);
     }
 
     return 0;
