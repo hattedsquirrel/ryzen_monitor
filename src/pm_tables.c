@@ -804,7 +804,7 @@ void pm_table_0x380905(pm_table *pmt, void* base_addr) {
     pmt->MP1_BUSY     = pm_element(170);
     pmt->MP5_BUSY     = pm_element(171);
 	
-    assign_pm_elements_8_consec(pmt->CORE_POWER         , 172);
+	assign_pm_elements_8_consec(pmt->CORE_POWER         , 172);
 	assign_pm_elements_8_consec(pmt->CORE_VOLTAGE       , 180);
 	assign_pm_elements_8_consec(pmt->CORE_TEMP          , 188);
 	assign_pm_elements_8_consec(pmt->CORE_FIT           , 196);
@@ -820,31 +820,32 @@ void pm_table_0x380905(pm_table *pmt, void* base_addr) {
 	assign_pm_elements_8_consec(pmt->CORE_PSTATE        , 276);
 	assign_pm_elements_8_consec(pmt->CORE_FREQ_LIM_MAX  , 284);
 	assign_pm_elements_8_consec(pmt->CORE_FREQ_LIM_MIN  , 292);
-	assign_pm_elements_8_consec(pmt->CORE_SC_LIMIT      , 300);
-	assign_pm_elements_8_consec(pmt->CORE_SC_CAC        , 308);
-	assign_pm_elements_8_consec(pmt->CORE_SC_RESIDENCY  , 316);
-	assign_pm_elements_8_consec(pmt->CORE_UOPS_CLK      , 324);
-	assign_pm_elements_8_consec(pmt->CORE_UOPS          , 332);
-	assign_pm_elements_8_consec(pmt->CORE_MEM_LATECY    , 340);
+	assign_pm_elements_8_consec(pmt->CORE_unk           , 300);
+	assign_pm_elements_8_consec(pmt->CORE_SC_LIMIT      , 308);
+	assign_pm_elements_8_consec(pmt->CORE_SC_CAC        , 316);
+	assign_pm_elements_8_consec(pmt->CORE_SC_RESIDENCY  , 324);
+	assign_pm_elements_8_consec(pmt->CORE_UOPS_CLK      , 332);
+	assign_pm_elements_8_consec(pmt->CORE_UOPS          , 340);
+	assign_pm_elements_8_consec(pmt->CORE_MEM_LATECY    , 348);
 	
-    pmt->L3_LOGIC_POWER[0] =                pm_element(348);
-	pmt->L3_VDDM_POWER[0] =                 pm_element(349);
-	pmt->L3_TEMP[0] =                       pm_element(350);
-	pmt->L3_FIT[0] =                        pm_element(351);
-	pmt->L3_IDDMAX[0] =                     pm_element(352);
-	pmt->L3_FREQ[0] =                       pm_element(353);
-	pmt->L3_FREQ_EFF[0] =                   pm_element(354);
-	pmt->L3_CKS_FDD[0] =                    pm_element(355);
-	pmt->L3_CCA_THRESHOLD[0] =              pm_element(356);
-	pmt->L3_CCA_CAC[0] =                    pm_element(357);
-	pmt->L3_CCA_ACTIVATION[0] =             pm_element(358);
-	pmt->L3_EDC_LIMIT[0] =                  pm_element(359);
-	pmt->L3_EDC_CAC[0] =                    pm_element(360);
-	pmt->L3_EDC_RESIDENCY[0] =              pm_element(361);
-    pmt->L3_FLL_BTC[0] =                    pm_element(362);
-	//unkown 363
+    pmt->L3_LOGIC_POWER[0] =                pm_element(356);
+	pmt->L3_VDDM_POWER[0] =                 pm_element(357);
+	pmt->L3_TEMP[0] =                       pm_element(358);
+	pmt->L3_FIT[0] =                        pm_element(359);
+	pmt->L3_IDDMAX[0] =                     pm_element(360);
+	pmt->L3_FREQ[0] =                       pm_element(361);
+	pmt->L3_FREQ_EFF[0] =                   pm_element(362);
+	pmt->L3_CKS_FDD[0] =                    pm_element(363);
+	pmt->L3_CCA_THRESHOLD[0] =              pm_element(364);
+	pmt->L3_CCA_CAC[0] =                    pm_element(365);
+	pmt->L3_CCA_ACTIVATION[0] =             pm_element(366);
+	pmt->L3_EDC_LIMIT[0] =                  pm_element(367);
+	pmt->L3_EDC_CAC[0] =                    pm_element(368);
+	pmt->L3_EDC_RESIDENCY[0] =              pm_element(369);
+    pmt->L3_FLL_BTC[0] =                    pm_element(370);
+	//unkown 371
 	
-	pmt->min_size = 363*4; //(Highest element we access + 1)*4.
+	pmt->min_size = 371*4; //(Highest element we access + 1)*4.
 	//Needed to avoid illegal memory access
 }
 
