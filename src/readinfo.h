@@ -35,7 +35,7 @@ typedef struct {
 } system_info;
 
 void print_memory_timings();
-unsigned int get_processor_topology(system_info *sysinfo, unsigned int zen_version);
+void get_processor_topology(system_info *sysinfo, unsigned int zen_version);
 unsigned int count_set_bits(unsigned int v);
 const char* get_processor_name();
 void append_u32_to_str(char* buffer, unsigned int val);

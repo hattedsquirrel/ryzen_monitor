@@ -82,7 +82,7 @@ unsigned int count_set_bits(unsigned int v) {
     return result;
 }
 
-unsigned int get_processor_topology(system_info *sysinfo, unsigned int zen_version) {
+void get_processor_topology(system_info *sysinfo, unsigned int zen_version) {
     unsigned int ccds_present, ccds_down, ccd_enable_map, ccd_disable_map,
         core_disable_map_addr, core_disable_map_tmp, logical_cores, threads_per_core,
         fam, model, fuse1, fuse2, offs, eax, ebx, ecx, edx;
