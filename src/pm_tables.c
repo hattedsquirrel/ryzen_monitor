@@ -1166,21 +1166,17 @@ void pm_table_0x240803(pm_table *pmt, void* base_addr) {
     pmt->PC6             = pm_element(135);
     pmt->PWM             = pm_element(136);
 
-    //From the PM table dumps I got, I couldn't figure out which clock is which
-    //Clocks were static over all dumps, but system seems to be under full load
-    //for all dump
-    //pmt->SOCCLK   = pm_element(137); //elem 137 -> 457.14
-    //pmt->SHUBCLK  = pm_element(138); //elem 138 -> 457.14
-    //pmt->MP0CLK   = pm_element(139); //elem 139 -> 457.14
-    //pmt->MP1CLK   = pm_element(140); //elem 140 -> 457.14
-    //pmt->MP5CLK   = pm_element(141); //elem 141 -> 400.00
-    //pmt->SMNCLK   = pm_element(142); //elem 142 -> 500.00
-    //pmt->TWIXCLK  = pm_element(143); //elem 143 -> 400.00
+    pmt->SOCCLK   = pm_element(137); //elem 137 -> 457.14
+    pmt->SHUBCLK  = pm_element(138); //elem 138 -> 457.14
+    pmt->MP0CLK   = pm_element(139); //elem 139 -> 457.14
+    pmt->MP1CLK   = pm_element(140); //elem 140 -> 457.14
+    pmt->MP5CLK   = pm_element(141); //elem 141 -> 400.00
+    pmt->SMNCLK   = pm_element(142); //elem 142 -> 500.00
+    pmt->TWIXCLK  = pm_element(143); //elem 143 -> 400.00
     pmt->WAFLCLK  = pm_element(144);
 
     pmt->DPM_BUSY = pm_element(145);
     pmt->MP1_BUSY = pm_element(146);
-    //pmt->MP5_BUSY //No idea where it is or if it exists
 
     assign_pm_elements_16_consec(pmt->CORE_POWER       , 147);
     assign_pm_elements_16_consec(pmt->CORE_VOLTAGE     , 163);
@@ -1198,8 +1194,6 @@ void pm_table_0x240803(pm_table *pmt, void* base_addr) {
     assign_pm_elements_16_consec(pmt->CORE_PSTATE      , 355);
     assign_pm_elements_16_consec(pmt->CORE_FREQ_LIM_MAX, 371);
     assign_pm_elements_16_consec(pmt->CORE_FREQ_LIM_MIN, 387);
-    //assign_pm_elements_16_consec(pmt->CORE_CPPC_MAX    , 371); //Does not exist.
-    //assign_pm_elements_16_consec(pmt->CORE_CPPC_MIN    , 387); //Does not exist.
     assign_pm_elements_16_consec(pmt->CORE_SC_LIMIT    , 403);
     assign_pm_elements_16_consec(pmt->CORE_SC_CAC      , 419);
     assign_pm_elements_16_consec(pmt->CORE_SC_RESIDENCY, 435);
@@ -1217,9 +1211,8 @@ void pm_table_0x240803(pm_table *pmt, void* base_addr) {
     assign_pm_elements_4_consec(pmt->L3_EDC_LIMIT     , 491);
     assign_pm_elements_4_consec(pmt->L3_EDC_CAC       , 495);
     assign_pm_elements_4_consec(pmt->L3_EDC_RESIDENCY , 499);
-    
-    //Two other values at 503 and 504: 31.10 and 30.04
+    assign_pm_elements_2(pmt->MP5_BUSY, 503, 504);
 
-    pmt->min_size = 503*4; //(Highest element we access + 1)*4.
+    pmt->min_size = 505*4; //(Highest element we access + 1)*4.
                            //Needed to avoid illegal memory access
 }
