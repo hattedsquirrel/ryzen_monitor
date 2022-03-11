@@ -1,6 +1,6 @@
 /**
  * Ryzen SMU Userspace Sensor Monitor
- * Copyright (C) 2021
+ * Copyright (C) 2021-2022
  *    Florian Huehn <hattedsquirrel@gmail.com> (https://hattedsquirrel.net)
  *
  * This program is free software: you can redistribute it and/or modify
@@ -161,12 +161,11 @@ typedef struct {
     float *unk_power;
     float *AVG_CORE_COUNT;
     float *CCLK_LIMIT;
-    float *MAX_VOLTAGE;
+    float *MAX_SOC_VOLTAGE;
     float *DVO_VOLTAGE;
     float *APML_POWER;
     float *CPU_DC_BTC;
     float *SOC_DC_BTC;
-    float *MAX_SOC_VOLTAGE;
     float *DC_BTC;
     float *PACKAGE_POWER;
     float *CSTATE_BOOST;

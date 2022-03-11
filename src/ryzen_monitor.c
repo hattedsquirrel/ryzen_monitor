@@ -309,9 +309,12 @@ int select_pm_table_version(unsigned int version, pm_table *pmt, unsigned char *
             return 0;
     }
 
-    //Avoid accesing bejond bounds of the defined arrays.
+    //Avoid access bejond bounds of the defined arrays.
     if (pmt->max_l3 > PMT_MAX_NUM_L3) pmt->max_l3 = PMT_MAX_NUM_L3;
     if (pmt->max_cores > PMT_MAX_NUM_CORES) pmt->max_cores = PMT_MAX_NUM_CORES;
+
+    //APML_POWER is probably identical to PACKAGE_POWER
+    if (pmt->PACKAGE_POWER == NULL) pmt->PACKAGE_POWER = pmt->APML_POWER;
 
     return 1;
 }

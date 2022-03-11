@@ -1,6 +1,6 @@
 /**
  * Ryzen SMU Userspace Sensor Monitor
- * Copyright (C) 2021
+ * Copyright (C) 2021-2022
  *    Florian Huehn <hattedsquirrel@gmail.com> (https://hattedsquirrel.net)
  *
  * This program is free software: you can redistribute it and/or modify
@@ -184,7 +184,7 @@ void pm_table_0x380804(pm_table *pmt, void* base_addr) {
     pmt->PEAK_CCLK_FREQ  = pm_element(142); //o
     pmt->AVG_CORE_COUNT  = pm_element(143);
     pmt->CCLK_LIMIT      = pm_element(144); //o GHz
-    pmt->MAX_VOLTAGE     = pm_element(145);
+    pmt->MAX_SOC_VOLTAGE     = pm_element(145);
     pmt->DVO_VOLTAGE     = pm_element(146); //o
     pmt->APML_POWER      = pm_element(147);
     pmt->CPU_DC_BTC      = pm_element(148);
@@ -332,16 +332,20 @@ void pm_table_0x380805(pm_table *pmt, void* base_addr) {
     pmt->FCLK_GMI_BUSY      = pm_element(55);
     pmt->FCLK_IOHC_SETPOINT = pm_element(56);
     pmt->FCLK_IOHC_BUSY     = pm_element(57);
-    pmt->FCLK_XGMI_SETPOINT = pm_element(58);
-    pmt->FCLK_XGMI_BUSY     = pm_element(59);
+	pmt->FCLK_MEM_LATENCY_SETPOINT =    pm_element(58);
+	pmt->FCLK_MEM_LATENCY =             pm_element(59);
+	pmt->FCLK_CCLK_SETPOINT =           pm_element(60);
+	pmt->FCLK_CCLK_FREQ =                    pm_element(61);
+	pmt->FCLK_XGMI_SETPOINT =           pm_element(62);
+	pmt->FCLK_XGMI_BUSY =               pm_element(63);
+	
+    pmt->CCM_READS =                    pm_element(64);
+	pmt->CCM_WRITES =                   pm_element(65);
+	pmt->IOMS =                         pm_element(66);
+	pmt->XGMI =                         pm_element(67);
+	pmt->CS_UMC_READS =                 pm_element(68);
+	pmt->CS_UMC_WRITES =                pm_element(69);
 
-    pmt->CCM_READS     = pm_element(60);
-    pmt->CCM_WRITES    = pm_element(61);
-    pmt->IOMS          = pm_element(62);
-    pmt->XGMI          = pm_element(63);
-    pmt->CS_UMC_READS  = pm_element(64);
-    pmt->CS_UMC_WRITES = pm_element(65);
-    //unknown: 66 .. 69
     assign_pm_elements_4(pmt->FCLK_RESIDENCY,     70,  71,  72,  73);
     assign_pm_elements_4(pmt->FCLK_FREQ_TABLE,    74,  75,  76,  77);
     assign_pm_elements_4(pmt->UCLK_FREQ_TABLE,    78,  79,  80,  81);
@@ -386,9 +390,10 @@ void pm_table_0x380805(pm_table *pmt, void* base_addr) {
     pmt->AVG_CORE_COUNT  = pm_element(146); //o
     pmt->CCLK_LIMIT      = pm_element(147); //o
     pmt->MAX_SOC_VOLTAGE = pm_element(148); //o
-    //149 -> //z
-    pmt->PACKAGE_POWER   = pm_element(150); //? some power at least. 22->86 in 64W eco mode. PPT maybe?
-    //unknown 151, 152
+    pmt->DVO_VOLTAGE     = pm_element(149);
+    pmt->APML_POWER   = pm_element(150); //? some power at least. 22->86 in 64W eco mode. PPT maybe?
+    pmt->CPU_DC_BTC      = pm_element(151);
+    pmt->SOC_DC_BTC      = pm_element(152);
     pmt->CSTATE_BOOST = pm_element(153);
     pmt->PROCHOT      = pm_element(154);
     pmt->PC6          = pm_element(155); //o
@@ -584,7 +589,7 @@ void pm_table_0x380904(pm_table *pmt, void* base_addr) {
     pmt->PEAK_CCLK_FREQ =               pm_element(142);
     pmt->AVG_CORE_COUNT =               pm_element(143);
     pmt->CCLK_LIMIT =                   pm_element(144);
-    pmt->MAX_VOLTAGE =                  pm_element(145);
+    pmt->MAX_SOC_VOLTAGE =              pm_element(145);
     pmt->DVO_VOLTAGE =                  pm_element(146);
     pmt->APML_POWER =                   pm_element(147);
     pmt->CPU_DC_BTC =                   pm_element(148);
@@ -730,7 +735,7 @@ void pm_table_0x380905(pm_table *pmt, void* base_addr) {
 	pmt->FCLK_MEM_LATENCY_SETPOINT =    pm_element(58);
 	pmt->FCLK_MEM_LATENCY =             pm_element(59);
 	pmt->FCLK_CCLK_SETPOINT =           pm_element(60);
-	pmt->FCLK_CCLK =                    pm_element(61);
+	pmt->FCLK_CCLK_FREQ =                    pm_element(61);
 	pmt->FCLK_XGMI_SETPOINT =           pm_element(62);
 	pmt->FCLK_XGMI_BUSY =               pm_element(63);
 	
@@ -785,9 +790,10 @@ void pm_table_0x380905(pm_table *pmt, void* base_addr) {
     pmt->AVG_CORE_COUNT  = pm_element(146);
     pmt->CCLK_LIMIT      = pm_element(147);
     pmt->MAX_SOC_VOLTAGE = pm_element(148);
-    //149 -> //z
-    pmt->PACKAGE_POWER   = pm_element(150);
-    //unknown 151, 152
+    pmt->DVO_VOLTAGE     = pm_element(149);
+    pmt->APML_POWER   = pm_element(150);
+    pmt->CPU_DC_BTC      = pm_element(151);
+    pmt->SOC_DC_BTC      = pm_element(152);
     pmt->CSTATE_BOOST = pm_element(153);
     pmt->PROCHOT      = pm_element(154);
     pmt->PC6          = pm_element(155);
