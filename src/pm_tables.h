@@ -60,9 +60,11 @@ typedef struct {
     float *VDD18_POWER;
     float *ROC_POWER;
     float *SOCKET_POWER;
+    float *CCLK_GLOBAL_FREQ;
     float *PPT_FREQUENCY;
     float *TDC_FREQUENCY;
     float *THM_FREQUENCY;
+    float *HTFMAX_FREQUENCY;
     float *PROCHOT_FREQUENCY;
     float *VOLTAGE_FREQUENCY;
     float *CCA_FREQUENCY;
@@ -88,6 +90,10 @@ typedef struct {
     float *FCLK_GMI_BUSY;
     float *FCLK_IOHC_SETPOINT;
     float *FCLK_IOHC_BUSY;
+    float *FCLK_MEM_LATENCY_SETPOINT;
+    float *FCLK_MEM_LATENCY;
+    float *FCLK_CCLK_SETPOINT;
+    float *FCLK_CCLK_FREQ;
     float *FCLK_XGMI_SETPOINT;
     float *FCLK_XGMI_BUSY;
     float *CCM_READS;
@@ -108,7 +114,7 @@ typedef struct {
     float *LCLK_MAX_DPM[4];
     float *LCLK_MIN_DPM[4];
     float *SOCCLK_FREQ_EFF[4];
-    float *HUBCLK_FREQ_EFF[4];
+    float *SHUBCLK_FREQ_EFF[4];
     float *XGMI_SETPOINT;
     float *XGMI_BUSY;
     float *XGMI_LANE_WIDTH;
@@ -134,6 +140,11 @@ typedef struct {
     float *unk_power;
     float *AVG_CORE_COUNT;
     float *CCLK_LIMIT;
+    float *MAX_VOLTAGE;
+    float *DVO_VOLTAGE;
+    float *APML_POWER;
+    float *CPU_DC_BTC;
+    float *SOC_DC_BTC;
     float *MAX_SOC_VOLTAGE;
     float *DC_BTC;
     float *PACKAGE_POWER;
@@ -155,7 +166,7 @@ typedef struct {
     float *WAFLCLK;
     float *DPM_BUSY;
     float *MP1_BUSY;
-    float *MP5_BUSY;
+    float *DPM_Skipped;
     float *CORE_POWER[PMT_MAX_NUM_CORES];
     float *CORE_VOLTAGE[PMT_MAX_NUM_CORES];
     float *CORE_TEMP[PMT_MAX_NUM_CORES];
@@ -196,6 +207,10 @@ typedef struct {
     float *L3_EDC_CAC[PMT_MAX_NUM_L3];
     float *L3_EDC_RESIDENCY[PMT_MAX_NUM_L3];
     float *L3_FLL_BTC[PMT_MAX_NUM_L3];
+    // MP5_BUSY seems to be always at the end of the table
+    // It can be an array from 1 up to 4 values
+    // What is currently assigned to MP5_BUSY seems to be called DPM_Skipped
+    float *MP5_BUSY[PMT_MAX_NUM_L3];
 } pm_table;
 
 void pm_table_0x380904(pm_table *pmt, void* base_addr);
