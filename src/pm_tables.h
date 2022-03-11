@@ -29,17 +29,34 @@ typedef struct {
     int max_l3;            //Number of L3 caches supported by the PM table
     int zen_version;       //Zen, Zen2 or Zen3?
     unsigned int min_size; //Size of the selected PM table version
+    int experimental;      //1 = Print experimental note
+    int powersum_unclear;  //1 = No idea how to calculate the total power
+    int has_graphics;      //1 = Has internal graphics
 
+    float *STAPM_LIMIT;
+    float *STAPM_VALUE;
     float *PPT_LIMIT;
     float *PPT_VALUE;
+    float *PPT_LIMIT_FAST;
+    float *PPT_VALUE_FAST;
+    float *PPT_LIMIT_APU;
+    float *PPT_VALUE_APU;
     float *TDC_LIMIT;
     float *TDC_VALUE;
+    float *TDC_LIMIT_SOC;
+    float *TDC_VALUE_SOC;
     float *THM_LIMIT;
     float *THM_VALUE;
+    float *THM_LIMIT_SOC;
+    float *THM_VALUE_SOC;
+    float *THM_LIMIT_GFX;
+    float *THM_VALUE_GFX;
     float *FIT_LIMIT;
     float *FIT_VALUE;
     float *EDC_LIMIT;
     float *EDC_VALUE;
+    float *EDC_LIMIT_SOC;
+    float *EDC_VALUE_SOC;
     float *VID_LIMIT;
     float *VID_VALUE;
     float *PPT_WC;
@@ -61,7 +78,11 @@ typedef struct {
     float *ROC_POWER;
     float *SOCKET_POWER;
     float *CCLK_GLOBAL_FREQ;
+    float *GLOB_FREQUENCY;
+    float *STAPM_FREQUENCY;
     float *PPT_FREQUENCY;
+    float *PPT_FREQUENCY_FAST;
+    float *PPT_FREQUENCY_APU;
     float *TDC_FREQUENCY;
     float *THM_FREQUENCY;
     float *HTFMAX_FREQUENCY;
@@ -161,6 +182,8 @@ typedef struct {
     float *MP0CLK_EFF;
     float *MP1CLK;
     float *MP1CLK_EFF;
+    float *MP2CLK;
+    float *MP2CLK_EFF;
     float *MP5CLK;
     float *TWIXCLK;
     float *WAFLCLK;
@@ -207,16 +230,40 @@ typedef struct {
     float *L3_EDC_CAC[PMT_MAX_NUM_L3];
     float *L3_EDC_RESIDENCY[PMT_MAX_NUM_L3];
     float *L3_FLL_BTC[PMT_MAX_NUM_L3];
+  
     // MP5_BUSY seems to be always at the end of the table
     // It can be an array from 1 up to 4 values
     // What is currently assigned to MP5_BUSY seems to be called DPM_Skipped
     float *MP5_BUSY[PMT_MAX_NUM_L3];
+
+    float *GFX_GLOB_FREQUENCY;
+    float *GFX_STAPM_FREQUENCY;
+    float *GFX_PPT_FREQUENCY_FAST;
+    float *GFX_PPT_FREQUENCY;
+    float *GFX_PPT_FREQUENCY_APU;
+    float *GFX_TDC_FREQUENCY;
+    float *GFX_THM_FREQUENCY;
+    float *GFX_PROCHOT_FREQUENCY;
+    float *GFX_VOLTAGE_FREQUENCY;
+    float *GFX_CCA_FREQUENCY;
+    float *GFX_DEM_FREQUENCY;
+    float *GFX_VOLTAGE;
+    float *GFX_TEMP;
+    float *GFX_IDDMAX;
+    float *GFX_FREQ;
+    float *GFX_FREQEFF;
+    float *GFX_BUSY;
+    float *GFX_CGPG;
+    float *GFX_EDC_LIM;
+    float *GFX_EDC_RESIDENCY;
+    float *GFX_DEM_RESIDENCY;
 } pm_table;
 
 void pm_table_0x380904(pm_table *pmt, void* base_addr);
 void pm_table_0x380905(pm_table *pmt, void* base_addr);
 void pm_table_0x380804(pm_table *pmt, void* base_addr);
 void pm_table_0x380805(pm_table *pmt, void* base_addr);
+void pm_table_0x400005(pm_table *pmt, void* base_addr);
 void pm_table_0x240903(pm_table *pmt, void* base_addr);
 void pm_table_0x240803(pm_table *pmt, void* base_addr);
 

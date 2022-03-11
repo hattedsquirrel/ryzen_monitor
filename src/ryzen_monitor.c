@@ -75,6 +75,10 @@ void draw_screen(pm_table *pmt, system_info *sysinfo) {
     float l3_logic_power, l3_vddm_power;
     char strbuf[100];
 
+    if (pmt->experimental) {
+        fprintf(stdout, "Warning: Support for this PM table version is expermiental. Can't trust anything.\n");
+    }
+
     if (sysinfo->available) {
         fprintf(stdout, "╭───────────────────────────────────────────────┬────────────────────────────────────────────────╮\n");
         print_line("CPU Model", sysinfo->cpu_name);
@@ -174,14 +178,21 @@ void draw_screen(pm_table *pmt, system_info *sysinfo) {
 
     print_line("Peak Temperature", "%8.2f C", pmta(PEAK_TEMP));
     print_line("SoC Temperature", "%8.2f C", pmta(SOC_TEMP));
+    if(pmt->GFX_TEMP) print_line("GFX Temperature", "%8.2f C", pmta(GFX_TEMP));
     //print_line("Core Power", "%8.4f W", pmta(VDDCR_CPU_POWER));
 
     print_line("Voltage from Core VRM", "%7.3f V | %7.3f V | %8.2f %%", pmta(VID_VALUE), pmta(VID_LIMIT), (pmta(VID_VALUE) / pmta(VID_LIMIT) * 100));
+    //if(pmt->STAPM_VALUE) print_line("STAPM", "%7.3f   | %7.f   | %8.2f %%", pmta(STAPM_VALUE), pmta(STAPM_LIMIT), (pmta(STAPM_VALUE) / pmta(STAPM_LIMIT) * 100));
     print_line("PPT", "%7.3f W | %7.f W | %8.2f %%", pmta(PPT_VALUE), pmta(PPT_LIMIT), (pmta(PPT_VALUE) / pmta(PPT_LIMIT) * 100));
+    if(pmt->PPT_VALUE_APU) print_line("PPT APU", "%7.3f W | %7.f W | %8.2f %%", pmta(PPT_VALUE_APU), pmta(PPT_LIMIT_APU), (pmta(PPT_VALUE_APU) / pmta(PPT_LIMIT_APU) * 100));
     print_line("TDC Value", "%7.3f A | %7.f A | %8.2f %%", pmta(TDC_VALUE), pmta(TDC_LIMIT), (pmta(TDC_VALUE) / pmta(TDC_LIMIT) * 100));
-    print_line("TDC Actual", "%7.3f A | %7.f A | %8.2f %%", pmta(TDC_ACTUAL), pmta(TDC_LIMIT), (pmta(TDC_ACTUAL) / pmta(TDC_LIMIT) * 100));
+    if(pmt->TDC_ACTUAL) print_line("TDC Actual", "%7.3f A | %7.f A | %8.2f %%", pmta(TDC_ACTUAL), pmta(TDC_LIMIT), (pmta(TDC_ACTUAL) / pmta(TDC_LIMIT) * 100));
+    if(pmt->TDC_VALUE_SOC) print_line("TDC Value, SoC only", "%7.3f A | %7.f A | %8.2f %%", pmta(TDC_VALUE_SOC), pmta(TDC_LIMIT_SOC), (pmta(TDC_VALUE_SOC) / pmta(TDC_LIMIT_SOC) * 100));
     print_line("EDC", "%7.3f A | %7.f A | %8.2f %%", edc_value, pmta(EDC_LIMIT), (edc_value / pmta(EDC_LIMIT) * 100));
+    if(pmt->EDC_VALUE_SOC) print_line("EDC, SoC only", "%7.3f A | %7.f A | %8.2f %%", pmta(EDC_VALUE_SOC), pmta(EDC_LIMIT_SOC), (pmta(EDC_VALUE_SOC) / pmta(EDC_LIMIT_SOC) * 100));
     print_line("THM", "%7.2f C | %7.f C | %8.2f %%", pmta(THM_VALUE), pmta(THM_LIMIT), (pmta(THM_VALUE) / pmta(THM_LIMIT) * 100));
+    if(pmt->THM_VALUE_SOC) print_line("THM SoC", "%7.2f C | %7.f C | %8.2f %%", pmta(THM_VALUE_SOC), pmta(THM_LIMIT_SOC), (pmta(THM_VALUE_SOC) / pmta(THM_LIMIT_SOC) * 100));
+    if(pmt->THM_VALUE_GFX) print_line("THM GFX", "%7.2f C | %7.f C | %8.2f %%", pmta(THM_VALUE_GFX), pmta(THM_LIMIT_GFX), (pmta(THM_VALUE_GFX) / pmta(THM_LIMIT_GFX) * 100));
     print_line("FIT", "%7.f   | %7.f   | %8.2f %%", pmta(FIT_VALUE), pmta(FIT_LIMIT), (pmta(FIT_VALUE) / pmta(FIT_LIMIT)) * 100.f);
     fprintf(stdout, "╰───────────────────────────────────────────────┴────────────────────────────────────────────────╯\n");
 
@@ -199,6 +210,16 @@ void draw_screen(pm_table *pmt, system_info *sysinfo) {
     if(pmt->V_VDDG_IOD) print_line("cLDO_VDDG_IOD", "%7.4f V", pmta(V_VDDG_IOD));
     if(pmt->V_VDDG_CCD) print_line("cLDO_VDDG_CCD", "%7.4f V", pmta(V_VDDG_CCD));
     fprintf(stdout, "╰───────────────────────────────────────────────┴────────────────────────────────────────────────╯\n");
+
+    if(pmt->has_graphics){
+    fprintf(stdout, "╭── Graphics Subsystem──────────────────────────┬────────────────────────────────────────────────╮\n");
+    print_line("GFX Voltage", "%7.4f V", pmta(GFX_VOLTAGE));
+    print_line("GFX Temperature", "%8.2f C", pmta(GFX_TEMP));
+    print_line("GFX Clock Real | Effective", "%5.f MHz | %5.f MHz", pmta(GFX_FREQ), pmta(GFX_FREQEFF));
+    print_line("GFX Busy", "%8.2f %%", pmta(GFX_BUSY) * 100.f);
+    print_line("GFX EDC Limit | Residency", "%7.3f A | %8.2f %%", pmta(GFX_EDC_LIM), pmta(GFX_EDC_RESIDENCY) * 100.f);
+    fprintf(stdout, "╰───────────────────────────────────────────────┴────────────────────────────────────────────────╯\n");
+    }
 
     fprintf(stdout, "╭── Power Consumption ──────────────────────────┬────────────────────────────────────────────────╮\n");
     //These powers are drawn via VDDCR_SOC and VDDCR_CPU and thus are pulled from the CPU power connector of the mainboard
@@ -251,12 +272,14 @@ void draw_screen(pm_table *pmt, system_info *sysinfo) {
     print_line("DDR_VDDP Power", "%7.3f W", pmta(DDR_VDDP_POWER));
     print_line("VDD18 Power", "%7.3f W", pmta(VDD18_POWER)); //Same as pmta(IO_VDD18_POWER)
 
+    if(!pmt->powersum_unclear) {
     //The sum is the thermal output of the whole package. Yes, this is higher than PPT and SOCKET_POWER.
     //Confirmed by measuring the actual current draw on the mainboard.
     print_line("","");
     print_line("Calculated Thermal Output", "%7.3f W", total_core_power + pmta0(VDDCR_SOC_POWER) + pmta0(GMI2_VDDG_POWER) 
             + l3_logic_power + l3_vddm_power
             + pmta0(VDDIO_MEM_POWER) + pmta0(IOD_VDDIO_MEM_POWER) + pmta0(DDR_VDDP_POWER) + pmta0(VDD18_POWER));
+    }
 
     fprintf(stdout, "├── Additional Reports ─────────────────────────┼────────────────────────────────────────────────┤\n");
     //print_line("ROC_POWER", "%7.4f",pmta(ROC_POWER));
@@ -279,6 +302,7 @@ int select_pm_table_version(unsigned int version, pm_table *pmt, unsigned char *
         case 0x380905: pm_table_0x380905(pmt, pm_buf); break; //Ryzen 5600X
         case 0x380804: pm_table_0x380804(pmt, pm_buf); break; //Ryzen 5900X / 5950X
         case 0x380805: pm_table_0x380805(pmt, pm_buf); break; //Ryzen 5900X / 5950X
+        case 0x400005: pm_table_0x400005(pmt, pm_buf); break; //Ryzen 5700G
         case 0x240903: pm_table_0x240903(pmt, pm_buf); break; //Ryzen 3700X / 3800X
         case 0x240803: pm_table_0x240803(pmt, pm_buf); break; //Ryzen 3950X
         default:
@@ -435,7 +459,7 @@ void signal_interrupt(int sig) {
 
 int main(int argc, char** argv) {
     smu_return_val ret;
-    int c=0, force=0, core=0;
+    int c=0, force=0, core=0, printtimings=0;
     char *dumpfile=0;
 
     //Set up signal handlers
@@ -453,8 +477,8 @@ int main(int argc, char** argv) {
                 print_version();
                 exit(0);
             case 'm':
-                print_memory_timings();
-                exit(0);
+                printtimings = 1;
+                break;
             case 'd':
                 if (optarg)
                     show_disabled_cores = atoi(optarg);
@@ -487,7 +511,7 @@ int main(int argc, char** argv) {
         }
     }
 
-    if(dumpfile)
+    if(dumpfile && !printtimings)
         read_from_dumpfile(dumpfile, force);
     else
     {
@@ -502,7 +526,8 @@ int main(int argc, char** argv) {
             exit(-2);
         }
 
-        start_pm_monitor(force);
+        if(printtimings) print_memory_timings();
+        else start_pm_monitor(force);
     }
 
     return 0;

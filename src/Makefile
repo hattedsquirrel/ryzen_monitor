@@ -1,11 +1,8 @@
 CC = gcc
-STRIP = strip
 
 CFLAGS = -O3 -mtune=native -march=native
-CFLAGS += -Ilib
-LDFLAGS = -lm
-
-SFLAGS = --strip-all
+override CFLAGS += -Ilib
+override LDFLAGS += -lm
 
 OUT = ryzen_monitor
 
@@ -20,7 +17,6 @@ all: $(OUT)
 
 $(OUT): $(OBJ)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $(OUT) $(OBJ)
-	$(STRIP) $(SFLAGS) $(OUT)
 
 clean:
 	rm -rf *.o lib/*.o
