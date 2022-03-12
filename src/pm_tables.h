@@ -1,6 +1,6 @@
 /**
  * Ryzen SMU Userspace Sensor Monitor
- * Copyright (C) 2021
+ * Copyright (C) 2021-2022
  *    Florian Huehn <hattedsquirrel@gmail.com> (https://hattedsquirrel.net)
  *
  * This program is free software: you can redistribute it and/or modify
@@ -77,6 +77,7 @@ typedef struct {
     float *VDD18_POWER;
     float *ROC_POWER;
     float *SOCKET_POWER;
+    float *CCLK_GLOBAL_FREQ;
     float *GLOB_FREQUENCY;
     float *STAPM_FREQUENCY;
     float *PPT_FREQUENCY;
@@ -84,6 +85,7 @@ typedef struct {
     float *PPT_FREQUENCY_APU;
     float *TDC_FREQUENCY;
     float *THM_FREQUENCY;
+    float *HTFMAX_FREQUENCY;
     float *PROCHOT_FREQUENCY;
     float *VOLTAGE_FREQUENCY;
     float *CCA_FREQUENCY;
@@ -112,7 +114,7 @@ typedef struct {
     float *FCLK_MEM_LATENCY_SETPOINT;
     float *FCLK_MEM_LATENCY;
     float *FCLK_CCLK_SETPOINT;
-    float *FCLK_CCLK;
+    float *FCLK_CCLK_FREQ;
     float *FCLK_XGMI_SETPOINT;
     float *FCLK_XGMI_BUSY;
     float *CCM_READS;
@@ -133,7 +135,7 @@ typedef struct {
     float *LCLK_MAX_DPM[4];
     float *LCLK_MIN_DPM[4];
     float *SOCCLK_FREQ_EFF[4];
-    float *HUBCLK_FREQ_EFF[4];
+    float *SHUBCLK_FREQ_EFF[4];
     float *XGMI_SETPOINT;
     float *XGMI_BUSY;
     float *XGMI_LANE_WIDTH;
@@ -160,6 +162,10 @@ typedef struct {
     float *AVG_CORE_COUNT;
     float *CCLK_LIMIT;
     float *MAX_SOC_VOLTAGE;
+    float *DVO_VOLTAGE;
+    float *APML_POWER;
+    float *CPU_DC_BTC;
+    float *SOC_DC_BTC;
     float *DC_BTC;
     float *PACKAGE_POWER;
     float *CSTATE_BOOST;
@@ -182,7 +188,7 @@ typedef struct {
     float *WAFLCLK;
     float *DPM_BUSY;
     float *MP1_BUSY;
-    float *MP5_BUSY;
+    float *DPM_Skipped;
     float *CORE_POWER[PMT_MAX_NUM_CORES];
     float *CORE_VOLTAGE[PMT_MAX_NUM_CORES];
     float *CORE_TEMP[PMT_MAX_NUM_CORES];
@@ -223,6 +229,11 @@ typedef struct {
     float *L3_EDC_CAC[PMT_MAX_NUM_L3];
     float *L3_EDC_RESIDENCY[PMT_MAX_NUM_L3];
     float *L3_FLL_BTC[PMT_MAX_NUM_L3];
+  
+    // MP5_BUSY seems to be always at the end of the table
+    // It can be an array from 1 up to 4 values
+    // What is currently assigned to MP5_BUSY seems to be called DPM_Skipped
+    float *MP5_BUSY[PMT_MAX_NUM_L3];
 
     float *GFX_GLOB_FREQUENCY;
     float *GFX_STAPM_FREQUENCY;
@@ -247,12 +258,12 @@ typedef struct {
     float *GFX_DEM_RESIDENCY;
 } pm_table;
 
-void pm_table_0x380904(pm_table *pmt, void* base_addr);
-void pm_table_0x380905(pm_table *pmt, void* base_addr);
-void pm_table_0x380804(pm_table *pmt, void* base_addr);
-void pm_table_0x380805(pm_table *pmt, void* base_addr);
-void pm_table_0x400005(pm_table *pmt, void* base_addr);
-void pm_table_0x240903(pm_table *pmt, void* base_addr);
-void pm_table_0x240803(pm_table *pmt, void* base_addr);
+void pm_table_0x380904(pm_table *pmt, void* base_addr); //5900X: Zen3, 16 cores, version 4
+void pm_table_0x380905(pm_table *pmt, void* base_addr); //5900X: Zen3, 16 cores, version 5
+void pm_table_0x380804(pm_table *pmt, void* base_addr); //5600X: Zen3,  8 cores, version 4
+void pm_table_0x380805(pm_table *pmt, void* base_addr); //5600X: Zen3,  8 cores, version 5
+void pm_table_0x400005(pm_table *pmt, void* base_addr); //5700G: Zen3,  8 cores, GPU, version 5
+void pm_table_0x240903(pm_table *pmt, void* base_addr); //3700X: Zen2,  8 cores, version 3
+void pm_table_0x240803(pm_table *pmt, void* base_addr); //3950X: Zen2, 16 cores, version 3
 
 #endif
