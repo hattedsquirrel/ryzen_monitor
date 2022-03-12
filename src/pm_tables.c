@@ -860,7 +860,7 @@ void pm_table_0x380905(pm_table *pmt, void* base_addr) {
 }
 
 void pm_table_0x400005(pm_table *pmt, void* base_addr) {
-    // Ryzen 5700G. Mapping kindly provided by djvol
+    // Ryzen 5700G. Mapping kindly provided by PJVol
 
     pmt->version = 0x400005;
     pmt->max_cores = 8; //Number of cores supported by this PM table version
