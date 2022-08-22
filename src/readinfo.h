@@ -31,6 +31,7 @@ typedef struct {
     unsigned int ccxs;
     unsigned int cores_per_ccx;
     unsigned int core_disable_map;
+    unsigned int core_disable_map_pmt;
     unsigned int enabled_cores_count;
 } system_info;
 
