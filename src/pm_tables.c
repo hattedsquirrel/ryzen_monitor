@@ -312,7 +312,7 @@ void pm_table_0x380805(pm_table *pmt, void* base_addr) {
     pmt->FIT_VOLTAGE                = pm_element(36);
     pmt->FIT_PRE_VOLTAGE            = pm_element(37);
     pmt->LATCHUP_VOLTAGE            = pm_element(38);
-    pmt->CPU_SET_VOLTAGE            = pm_element(39); //os
+    pmt->CPU_SET_VOLTAGE            = pm_element(39); //os6
     pmt->CPU_TELEMETRY_VOLTAGE      = pm_element(40);
     pmt->CPU_TELEMETRY_VOLTAGE2     = pm_element(41);
     pmt->CPU_TELEMETRY_CURRENT      = pm_element(42); //o
@@ -866,7 +866,7 @@ void pm_table_0x400005(pm_table *pmt, void* base_addr) {
     pmt->max_cores = 8; //Number of cores supported by this PM table version
     pmt->max_l3 = 1; //Number of L3 caches supported by this PM table version
     pmt->zen_version = 3; //Zen3
-    pmt->experimental = 1; //Print experimental note
+    pmt->experimental = 0; //Print experimental note
     pmt->powersum_unclear = 1; //No idea how to calculate the total power
     pmt->has_graphics = 1; //Print GFX information
 
