@@ -158,6 +158,7 @@ void get_processor_topology(system_info *sysinfo, unsigned int zen_version) {
                 sysinfo->cores_per_ccx = 8;
             }
             sysinfo->enabled_cores_count = 8*(sysinfo->ccds) - count_set_bits(sysinfo->core_disable_map);
+            break;
         case 2:
         default:
             sysinfo->cores_per_ccx = (8 - count_set_bits(sysinfo->core_disable_map & 0xff)) / 2;
