@@ -37,7 +37,7 @@
 #include "readinfo.h"
 #include "pm_tables.h"
 
-#define PROGRAM_VERSION "1.0.4"
+#define PROGRAM_VERSION "1.0.6"
 
 smu_obj_t obj;
 static int update_time_s = 1;
@@ -338,11 +338,33 @@ int select_pm_table_version(unsigned int version, pm_table *pmt, unsigned char *
     return 1;
 }
 
+void disabled_cores_0x400005(pm_table *pmt, system_info *sysinfo) {
+    int i, mask;
+    float power, voltage, fit, iddmax, freq, freqeff, c0, cc1, irm;
+    for (i = 0; i < 8; i++) {
+        power = pmta(CORE_POWER[i]);
+        voltage = pmta(CORE_VOLTAGE[i]);
+        fit = pmta(CORE_FIT[i]);
+        iddmax = pmta(CORE_IDDMAX[i]);
+        freq = pmta(CORE_FREQ[i]);
+        freqeff = pmta(CORE_FREQEFF[i]);
+        c0 = pmta(CORE_C0[i]);
+        cc1 = pmta(CORE_CC1[i]);
+        irm = pmta(CORE_IRM[i]);
+        
+        if (power == 0 && voltage == 0 && fit == 0 && iddmax == 0 && freq == 0 && freqeff == 0 && c0 == 0 && cc1 == 0 && irm == 0 ) {
+            mask = 1 << i;
+        } else {
+            mask = 0 << i;
+        }
+        sysinfo->core_disable_map_pmt = sysinfo->core_disable_map_pmt | mask;
+    }
+}
+
 void start_pm_monitor(unsigned int force) {
     unsigned char *pm_buf;
     pm_table pmt;
     system_info sysinfo;
-
 
     if (!smu_pm_tables_supported(&obj)) {
         fprintf(stderr, "PM Tables are not supported on this platform.\n");
@@ -377,6 +399,14 @@ void start_pm_monitor(unsigned int force) {
     sysinfo.cpu_name    = get_processor_name();
     sysinfo.codename    = smu_codename_to_str(&obj);
     sysinfo.smu_fw_ver  = smu_get_fw_version(&obj);
+
+    //PMT hack for Cezanne's core_disabled_map 
+    if (obj.pm_table_version == 0x400005) {
+        if (smu_read_pm_table(&obj, pm_buf, obj.pm_table_size) == SMU_Return_OK) {
+            disabled_cores_0x400005(&pmt, &sysinfo);
+        }
+    }
+    
     get_processor_topology(&sysinfo, pmt.zen_version);
 
     switch (obj.smu_if_version) {
