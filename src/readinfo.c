@@ -104,7 +104,7 @@ void get_processor_topology(system_info *sysinfo, unsigned int zen_version) {
         //fuse2 += 0x10;
         offs = 0x598;
     }
-    else if (fam == 0x17 && model != 0x71) {
+    else if (fam == 0x17 && model != 0x71 && model != 0x31) {
         fuse1 += 0x40;
         fuse2 += 0x40;
     }
@@ -146,12 +146,19 @@ void get_processor_topology(system_info *sysinfo, unsigned int zen_version) {
         case 3:
             //Zen3 does not have CCXs anymore. They now have 8 cores per CCD
             //each with the same access to each other and the common L3 cache.
-            sysinfo->ccxs = 0;
-            sysinfo->ccds = count_set_bits(ccd_enable_map);
-            sysinfo->cores_per_ccx = 8 - count_set_bits(sysinfo->core_disable_map & 0xff);
+            if (model != 0x50) {// Exclude Cezanne
+                sysinfo->ccxs = 0;
+                sysinfo->ccds = count_set_bits(ccd_enable_map);
+                sysinfo->cores_per_ccx = 8 - count_set_bits(sysinfo->core_disable_map & 0xff);
+                sysinfo->enabled_cores_count = 8*(sysinfo->ccds) - count_set_bits(sysinfo->core_disable_map);
+
+            } else {
+                sysinfo->core_disable_map = sysinfo->core_disable_map_pmt;
+                sysinfo->ccds = 1;
+                sysinfo->cores_per_ccx = 8;
+            }
             sysinfo->enabled_cores_count = 8*(sysinfo->ccds) - count_set_bits(sysinfo->core_disable_map);
             break;
-
         case 2:
         default:
             sysinfo->cores_per_ccx = (8 - count_set_bits(sysinfo->core_disable_map & 0xff)) / 2;
