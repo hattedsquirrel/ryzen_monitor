@@ -24,12 +24,7 @@
 #include <pthread.h>
 
 /* Version the loaded driver must use to be compatible. */
-#define KERNEL_DRIVER_SUPP_VERS_COUNT 3
-static char kernel_driver_supported_versions[KERNEL_DRIVER_SUPP_VERS_COUNT][10] = {
-    "0.1.0",
-    "0.1.1",
-    "0.1.2"
-};
+#define LIBSMU_SUPPORTED_DRIVER_VERSION                    "0.1.2"
 
 /**
  * SMU Mailbox Target
@@ -61,15 +56,17 @@ typedef enum {
     SMU_Return_InsufficientSize  = 0xF8,
     // Failed to map physical address.
     SMU_Return_MappedError       = 0xF7,
+    // PCIe programming error.
+    SMU_Return_PCIFailed         = 0xF6,
 
     // Userspace Library Codes
 
     // Driver is not currently loaded or inaccessible.
-    SMU_Return_DriverNotPresent  = 0xF6,
+    SMU_Return_DriverNotPresent  = 0xF0,
     // Read or write error has occurred. Check errno for last error.
-    SMU_Return_RWError           = 0xF5,
+    SMU_Return_RWError           = 0xE9,
     // Driver version is incompatible.
-    SMU_Return_DriverVersion     = 0xF4,
+    SMU_Return_DriverVersion     = 0xE8,
 } smu_return_val;
 
 /**
@@ -87,9 +84,7 @@ typedef enum {
     CODENAME_RAVENRIDGE2,
     CODENAME_SUMMITRIDGE,
     CODENAME_PINNACLERIDGE,
-
-    // Not yet supported but still added for now.
-    CODENAME_REMBRANT,
+    CODENAME_REMBRANDT,
     CODENAME_VERMEER,
     CODENAME_VANGOGH,
     CODENAME_CEZANNE,
@@ -123,15 +118,15 @@ enum SMU_MUTEX_LOCK {
 };
 
 typedef struct {
-    /* Accessible To Users */
-    int                         init;
-    int                         driver_version;
+    /* Accessible To Users, Read-Only. */
+    unsigned int                init;
+    unsigned int                driver_version;
 
     smu_processor_codename      codename;
     smu_if_version              smu_if_version;
-    int                         smu_version;
-    int                         pm_table_size;
-    int                         pm_table_version;
+    unsigned int                smu_version;
+    unsigned int                pm_table_size;
+    unsigned int                pm_table_version;
 
     /* Internal Library Use Only */
     int                         fd_smn;
@@ -167,13 +162,16 @@ typedef union {
 
 /**
  * Initializes or frees the userspace library for use.
- * Upon successful initialization, users are allowed to access
- *  codename, smu_version, pm_table_size and pm_table_version from
- *  the initialized structure.
+ * Upon successful initialization, users are allowed to access the following members:
+ *  - codename
+ *  - smu_if_version
+ *  - smu_version
+ *  - pm_table_size
+ *  - pm_table_version
  *
  * Returns SMU_Return_OK on success.
  */
-int smu_init(smu_obj_t* obj);
+smu_return_val smu_init(smu_obj_t* obj);
 void smu_free(smu_obj_t* obj);
 
 /**
@@ -184,7 +182,7 @@ const char* smu_get_fw_version(smu_obj_t* obj);
 /**
  * Reads or writes a 32 bit word from the SMN address space.
  */
-unsigned int smu_read_smn_addr(smu_obj_t* obj, unsigned int address, unsigned int* result);
+smu_return_val smu_read_smn_addr(smu_obj_t* obj, unsigned int address, unsigned int* result);
 smu_return_val smu_write_smn_addr(smu_obj_t* obj, unsigned int address, unsigned int value);
 
 /**
@@ -193,7 +191,7 @@ smu_return_val smu_write_smn_addr(smu_obj_t* obj, unsigned int address, unsigned
  * 
  * Returns SMU_Return_OK on success.
  */
-smu_return_val smu_send_command(smu_obj_t* obj, unsigned int op, smu_arg_t args,
+smu_return_val smu_send_command(smu_obj_t* obj, unsigned int op, smu_arg_t *args,
     enum smu_mailbox mailbox);
 
 /**
