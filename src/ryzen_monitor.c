@@ -2,6 +2,7 @@
  * Ryzen SMU Userspace Sensor Monitor
  * Copyright (C) 2020-2021
  *    Florian Huehn <hattedsquirrel@gmail.com> (https://hattedsquirrel.net)
+ *    Jeffrey Bosboom <jbosboom@jeffreybosboom.com>
  *    Based on work of:
  *    Leonardo Gates <leogatesx9r@protonmail.com>
  *
@@ -361,6 +362,22 @@ void disabled_cores_0x400005(pm_table *pmt, system_info *sysinfo) {
     }
 }
 
+static sig_atomic_t stop_requested = 0;
+void signal_interrupt(int sig) {
+    switch (sig) {
+        case SIGINT:
+        case SIGTERM:
+            if (stop_requested)
+                // We got stuck cleaning up and the user sent another signal.
+                // Exit now without cleaning up.
+                _exit(1);
+            stop_requested = 1;
+            break;
+        default:
+            break;
+    }
+}
+
 void start_pm_monitor(unsigned int force) {
     unsigned char *pm_buf;
     pm_table pmt;
@@ -418,7 +435,7 @@ void start_pm_monitor(unsigned int force) {
         default:            sysinfo.if_ver =  0; break;
     }
 
-    while(1) {
+    while (!stop_requested) {
         if (smu_read_pm_table(&obj, pm_buf, obj.pm_table_size) != SMU_Return_OK)
             continue;
 
@@ -429,6 +446,8 @@ void start_pm_monitor(unsigned int force) {
 
         sleep(update_time_s);
     }
+
+    fprintf(stdout, "\e[?25h"); // Show Cursor
 }
 
 void read_from_dumpfile(char *dumpfile, unsigned int version) {
@@ -496,27 +515,13 @@ void show_help(char* program) {
     );
 }
 
-void signal_interrupt(int sig) {
-    switch (sig) {
-        case SIGINT:
-        case SIGABRT:
-        case SIGTERM:
-            // Re-enable the cursor.
-            fprintf(stdout, "\e[?25h");
-            exit(0);
-        default:
-            break;
-    }
-}
-
 int main(int argc, char** argv) {
     smu_return_val ret;
     int c=0, force=0, core=0, printtimings=0;
     char *dumpfile=0;
 
     //Set up signal handlers
-    if ((signal(SIGABRT, signal_interrupt) == SIG_ERR) ||
-        (signal(SIGTERM, signal_interrupt) == SIG_ERR) ||
+    if ((signal(SIGTERM, signal_interrupt) == SIG_ERR) ||
         (signal(SIGINT, signal_interrupt) == SIG_ERR)) {
         fprintf(stderr, "Can't set up signal hooks.\n");
         exit(-1);
