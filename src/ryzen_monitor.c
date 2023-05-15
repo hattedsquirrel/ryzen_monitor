@@ -327,7 +327,7 @@ void signal_interrupt(int sig) {
     }
 }
 
-void start_pm_monitor(unsigned int force, const struct output_ops* ops) {
+void start_pm_monitor(unsigned int force, int repeating, const struct output_ops* ops) {
     unsigned char *pm_buf;
     pm_table pmt;
     system_info sysinfo;
@@ -384,16 +384,16 @@ void start_pm_monitor(unsigned int force, const struct output_ops* ops) {
         default:            sysinfo.if_ver =  0; break;
     }
 
-    ops->init(1, isatty(fileno(stdout)));
+    ops->init(repeating, isatty(fileno(stdout)));
 
-    while (!stop_requested) {
+    do {
         if (smu_read_pm_table(&obj, pm_buf, obj.pm_table_size) != SMU_Return_OK)
             continue;
 
         draw_screen(&pmt, &sysinfo, ops);
 
         sleep(update_time_s);
-    }
+    } while (repeating && !stop_requested);
 
     ops->cleanup();
 }
@@ -462,13 +462,14 @@ void show_help(char* program) {
             "\t-f<hex-value> - Force to use a specific PM table version.\n"
             "\t-t<filename>  - Test mode. Read PM Table from raw-dumfile. Use in conjunction with -f\n",
             "\t-o<format>    - Output format (boxdrawing, json, ndjson)\n",
+            "\t-1            - Print once and exit\n",
         program
     );
 }
 
 int main(int argc, char** argv) {
     smu_return_val ret;
-    int c=0, force=0, core=0, printtimings=0;
+    int c=0, force=0, core=0, printtimings=0, repeating=1;
     char *dumpfile=0;
     const struct output_ops* ops = &box_drawing_ops;
 
@@ -480,7 +481,7 @@ int main(int argc, char** argv) {
     }
 
     //Parse arguments
-    while ((c = getopt(argc, argv, "vmd::f:t:u:o:h")) != -1) {
+    while ((c = getopt(argc, argv, "vmd::f:t:u:o:1h")) != -1) {
         switch (c) {
             case 'v':
                 print_version();
@@ -520,6 +521,9 @@ int main(int argc, char** argv) {
                     exit(0);
                 }
                 break;
+            case '1':
+                repeating = 0;
+                break;
             case 'u':
                 update_time_s = atoi(optarg);
                 break;
@@ -532,6 +536,9 @@ int main(int argc, char** argv) {
                 break;
         }
     }
+
+    if (!repeating)
+        update_time_s = 0;
 
     if(dumpfile && !printtimings)
         read_from_dumpfile(dumpfile, force, ops);
@@ -549,7 +556,7 @@ int main(int argc, char** argv) {
         }
 
         if(printtimings) print_memory_timings();
-        else start_pm_monitor(force, ops);
+        else start_pm_monitor(force, repeating, ops);
     }
 
     return 0;
