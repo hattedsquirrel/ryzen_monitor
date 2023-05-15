@@ -19,6 +19,7 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <time.h>
 
 #include "output_ops.h"
 
@@ -41,8 +42,10 @@ static void json_init(_Bool repeating, _Bool interactive) {}
 static void json_cleanup() {}
 
 static void json_begin() {
-    fprintf(stdout, "{");
-    elements_in_top_level = 0;
+    struct timespec t;
+    clock_gettime(CLOCK_MONOTONIC_RAW, &t);
+    fprintf(stdout, "{\"timestamp\":%ld", t.tv_sec * 1000000000 + t.tv_nsec);
+    elements_in_top_level = 1;
 }
 
 static void json_end() {

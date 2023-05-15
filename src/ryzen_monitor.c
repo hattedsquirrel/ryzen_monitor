@@ -42,7 +42,7 @@
 #define PROGRAM_VERSION "1.0.6"
 
 smu_obj_t obj;
-static int update_time_s = 1;
+static struct timespec update_time_s = {1, 0};
 static int show_disabled_cores = 0;
 
 //Helper to access the PM Table elements. If an element doesn't exist in the
@@ -392,7 +392,7 @@ void start_pm_monitor(unsigned int force, int repeating, const struct output_ops
 
         draw_screen(&pmt, &sysinfo, ops);
 
-        sleep(update_time_s);
+        nanosleep(&update_time_s, NULL);
     } while (repeating && !stop_requested);
 
     ops->cleanup();
@@ -467,6 +467,18 @@ void show_help(char* program) {
     );
 }
 
+struct timespec parse_fractional_time(const char* s) {
+    // In "3.14", the "3" represents 3 seconds, but the "14" represents
+    // 140000000 nanoseconds -- it's a "left-justified" number.  Deal with that
+    // by writing the fractional part to the front of a buffer of "0" and then
+    // scanning that buffer.
+    struct timespec t;
+    char fract[] = "000000000";
+    sscanf(s, "%ld.%9c", &t.tv_sec, fract);
+    t.tv_nsec = atol(fract);
+    return t;
+}
+
 int main(int argc, char** argv) {
     smu_return_val ret;
     int c=0, force=0, core=0, printtimings=0, repeating=1;
@@ -525,7 +537,7 @@ int main(int argc, char** argv) {
                 repeating = 0;
                 break;
             case 'u':
-                update_time_s = atoi(optarg);
+                update_time_s = parse_fractional_time(optarg);
                 break;
             case 'h':
                 show_help(argv[0]);
@@ -538,7 +550,7 @@ int main(int argc, char** argv) {
     }
 
     if (!repeating)
-        update_time_s = 0;
+        update_time_s.tv_sec = update_time_s.tv_nsec = 0;
 
     if(dumpfile && !printtimings)
         read_from_dumpfile(dumpfile, force, ops);
