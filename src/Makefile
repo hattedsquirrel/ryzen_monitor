@@ -10,6 +10,7 @@ SRC = ryzen_monitor.c
 SRC += pm_tables.c
 SRC += readinfo.c
 SRC += box_drawing_ops.c
+SRC += json_ops.c
 SRC += lib/libsmu.c
 
 OBJ = $(SRC:.c=.o)

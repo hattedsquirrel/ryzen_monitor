@@ -461,6 +461,7 @@ void show_help(char* program) {
             "\t-u<seconds>   - Update the monitoring only after this number of second(s) have passed. Defaults to 1.\n"
             "\t-f<hex-value> - Force to use a specific PM table version.\n"
             "\t-t<filename>  - Test mode. Read PM Table from raw-dumfile. Use in conjunction with -f\n",
+            "\t-o<format>    - Output format (boxdrawing, json, ndjson)\n",
         program
     );
 }
@@ -469,6 +470,7 @@ int main(int argc, char** argv) {
     smu_return_val ret;
     int c=0, force=0, core=0, printtimings=0;
     char *dumpfile=0;
+    const struct output_ops* ops = &box_drawing_ops;
 
     //Set up signal handlers
     if ((signal(SIGTERM, signal_interrupt) == SIG_ERR) ||
@@ -478,7 +480,7 @@ int main(int argc, char** argv) {
     }
 
     //Parse arguments
-    while ((c = getopt(argc, argv, "vmd::f:t:u:h")) != -1) {
+    while ((c = getopt(argc, argv, "vmd::f:t:u:o:h")) != -1) {
         switch (c) {
             case 'v':
                 print_version();
@@ -505,6 +507,19 @@ int main(int argc, char** argv) {
                 }
                 dumpfile=optarg;
                 break;
+            case 'o':
+                if (!optarg) optarg = "";
+                if (!strcmp(optarg, "boxdrawing") || !strcmp(optarg, "box-drawing"))
+                    ops = &box_drawing_ops;
+                else if (!strcmp(optarg, "json"))
+                    ops = &json_ops;
+                else if (!strcmp(optarg, "ndjson"))
+                    ops = &ndjson_ops;
+                else {
+                    show_help(argv[0]);
+                    exit(0);
+                }
+                break;
             case 'u':
                 update_time_s = atoi(optarg);
                 break;
@@ -519,7 +534,7 @@ int main(int argc, char** argv) {
     }
 
     if(dumpfile && !printtimings)
-        read_from_dumpfile(dumpfile, force, &box_drawing_ops);
+        read_from_dumpfile(dumpfile, force, ops);
     else
     {
         if (getuid() != 0 && geteuid() != 0) {
@@ -534,7 +549,7 @@ int main(int argc, char** argv) {
         }
 
         if(printtimings) print_memory_timings();
-        else start_pm_monitor(force, &box_drawing_ops);
+        else start_pm_monitor(force, ops);
     }
 
     return 0;
