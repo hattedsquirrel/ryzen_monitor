@@ -1,6 +1,6 @@
 CC = gcc
 
-CFLAGS = -O3 -mtune=native -march=native
+CFLAGS = -O3 -mtune=native -march=native -DNDEBUG
 override CFLAGS += -Ilib
 override LDFLAGS += -lm
 
@@ -9,6 +9,8 @@ OUT = ryzen_monitor
 SRC = ryzen_monitor.c
 SRC += pm_tables.c
 SRC += readinfo.c
+SRC += box_drawing_ops.c
+SRC += json_ops.c
 SRC += lib/libsmu.c
 
 OBJ = $(SRC:.c=.o)

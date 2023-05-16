@@ -2,6 +2,7 @@
  * Ryzen SMU Userspace Sensor Monitor
  * Copyright (C) 2020-2021
  *    Florian Huehn <hattedsquirrel@gmail.com> (https://hattedsquirrel.net)
+ *    Jeffrey Bosboom <jbosboom@jeffreybosboom.com>
  *    Based on work of:
  *    Leonardo Gates <leogatesx9r@protonmail.com>
  *
@@ -36,23 +37,13 @@
 #include <libsmu.h>
 #include "readinfo.h"
 #include "pm_tables.h"
+#include "output_ops.h"
 
 #define PROGRAM_VERSION "1.0.6"
 
 smu_obj_t obj;
-static int update_time_s = 1;
+static struct timespec update_time_s = {1, 0};
 static int show_disabled_cores = 0;
-
-void print_line(const char* label, const char* value_format, ...) {
-    static char buffer[1024];
-    va_list list;
-
-    va_start(list, value_format);
-    vsnprintf(buffer, sizeof(buffer), value_format, list);
-    va_end(list);
-
-    fprintf(stdout, "│ %45s │ %46s │\n", label, buffer);
-}
 
 //Helper to access the PM Table elements. If an element doesn't exist in the
 //current PM Table version, it's pointer is set to 0. This helper returns
@@ -61,7 +52,7 @@ void print_line(const char* label, const char* value_format, ...) {
 //Same, but with 0 as return. For summations that should not fail if one value is not present.
 #define pmta0(elem) ((pmt->elem)?(*pmt->elem):0)
 
-void draw_screen(pm_table *pmt, system_info *sysinfo) {
+void draw_screen(pm_table *pmt, system_info *sysinfo, const struct output_ops *ops) {
     //general
     int i, j;
     //core block
@@ -79,21 +70,22 @@ void draw_screen(pm_table *pmt, system_info *sysinfo) {
         fprintf(stdout, "Warning: Support for this PM table version is expermiental. Can't trust anything.\n");
     }
 
+    ops->begin();
+
     if (sysinfo->available) {
-        fprintf(stdout, "╭───────────────────────────────────────────────┬────────────────────────────────────────────────╮\n");
-        print_line("CPU Model", sysinfo->cpu_name);
-        print_line("Processor Code Name", sysinfo->codename);
-        print_line("Cores", "%d", sysinfo->cores);
-        print_line("Core CCDs", "%d", sysinfo->ccds);
-        if (pmt->zen_version!=3) {
-            print_line("Core CCXs", "%d", sysinfo->ccxs);
-            print_line("Cores Per CCX", "%d", sysinfo->cores_per_ccx);
-        }
-        else
-            print_line("Cores Per CCD", "%d", sysinfo->cores_per_ccx); //Zen3 does not have CCXs anymore
-        print_line("SMU FW Version", "v%s", sysinfo->smu_fw_ver);
-        print_line("MP1 IF Version", "v%d", sysinfo->if_ver);
-        fprintf(stdout, "╰───────────────────────────────────────────────┴────────────────────────────────────────────────╯\n");
+        ops->begin_group(GROUP_SYSINFO);
+        ops->datum_string(DATUM_MODEL, sysinfo->cpu_name);
+        ops->datum_string(DATUM_CODENAME, sysinfo->codename);
+        ops->datum_int(DATUM_CORES, sysinfo->cores, UNIT_COUNT);
+        ops->datum_int(DATUM_CCDS, sysinfo->ccds, UNIT_COUNT);
+        if (pmt->zen_version < 3) {
+            ops->datum_int(DATUM_CCXS, sysinfo->ccxs, UNIT_COUNT);
+            ops->datum_int(DATUM_CORES_PER_CCX, sysinfo->cores_per_ccx, UNIT_COUNT);
+        } else
+            ops->datum_int(DATUM_CORES_PER_CCD, sysinfo->cores_per_ccx, UNIT_COUNT); //Zen3 does not have CCXs anymore
+        ops->datum_string(DATUM_SMU_FW_VERSION, sysinfo->smu_fw_ver);
+        ops->datum_int(DATUM_MP1_IF_VERSION, sysinfo->if_ver, UNIT_COUNT);
+        ops->end_group(GROUP_SYSINFO);
     }
 
 
@@ -111,7 +103,7 @@ void draw_screen(pm_table *pmt, system_info *sysinfo) {
         average_voltage = pmta(CPU_TELEMETRY_VOLTAGE);
     }
 
-    fprintf(stdout, "╭─────────┬────────────┬──────────┬─────────┬──────────┬─────────────┬─────────────┬─────────────╮\n");
+    ops->begin_group(GROUP_CORES);
     for (i = 0; i < pmt->max_cores; i++) {
         core_disabled = (sysinfo->core_disable_map >> i)&0x01;
         core_frequency = pmta(CORE_FREQEFF[i]) * 1000.f;
@@ -123,30 +115,14 @@ void draw_screen(pm_table *pmt, system_info *sysinfo) {
             core_voltage = ((1.0 - core_sleep_time) * average_voltage) + (0.2 * core_sleep_time);
         //}
 
-        if (core_disabled) {
-            if (show_disabled_cores)
-                    fprintf(stdout,
-                        "│ %*s %d │   Disabled | %6.3f W | %5.3f V | %6.2f C | C0: %5.1f %% | C1: %5.1f %% | C6: %5.1f %% │\n",
-                    (core_number<10)+4, "Core", core_number, //Print "Core" and its number but right-justified
-                        pmta(CORE_POWER[i]), core_voltage, pmta(CORE_TEMP[i]),
-                        pmta(CORE_C0[i]), pmta(CORE_CC1[i]), pmta(CORE_CC6[i]));
-        }
-        else if (pmta(CORE_C0[i]) >= 6.f) {
-            // AMD denotes a sleeping core as having spent less than 6% of the time in C0.
-            // Source: Ryzen Master
-                fprintf(stdout,
-                    "│ %*s %d │   %4.f MHz | %6.3f W | %5.3f V | %6.2f C | C0: %5.1f %% | C1: %5.1f %% | C6: %5.1f %% │\n",
-                (core_number<10)+4, "Core", core_number, //Print "Core" and its number but right-justified
-                core_frequency, pmta(CORE_POWER[i]), core_voltage, pmta(CORE_TEMP[i]),
-                    pmta(CORE_C0[i]), pmta(CORE_CC1[i]), pmta(CORE_CC6[i]));
-            }
-            else {
-                fprintf(stdout,
-                    "│ %*s %d │   Sleeping | %6.3f W | %5.3f V | %6.2f C | C0: %5.1f %% | C1: %5.1f %% | C6: %5.1f %% │\n",
-                (core_number<10)+4, "Core", core_number, //Print "Core" and its number but right-justified
+        // AMD denotes a sleeping core as having spent less than 6% of the time in C0.
+        // Source: Ryzen Master
+        _Bool core_sleeping = pmta(CORE_C0[i]) <= 6.f;
+
+        if (show_disabled_cores || !core_disabled)
+            ops->core(core_number, core_disabled, core_sleeping, core_frequency,
                     pmta(CORE_POWER[i]), core_voltage, pmta(CORE_TEMP[i]),
                     pmta(CORE_C0[i]), pmta(CORE_CC1[i]), pmta(CORE_CC6[i]));
-        }
 
         //Don't confuse people by numbering cores that are disabled and hence not shown on 6 | 12 core CPUs
         //(which actually have 8 | 16 cores)
@@ -163,86 +139,85 @@ void draw_screen(pm_table *pmt, system_info *sysinfo) {
             total_core_CC6 += pmta(CORE_CC6[i]);
         }
     }
+    ops->end_group(GROUP_CORES);
 
-    fprintf(stdout, "╰─────────┴────────────┴──────────┴─────────┴──────────┴─────────────┴─────────────┴─────────────╯\n");
+    ops->begin_group(GROUP_CORE_STATS_CALC);
+    ops->datum_float(DATUM_PEAK_CORE_FREQ, peak_core_frequency, UNIT_MEGAHERTZ);
+    ops->datum_float(DATUM_PEAK_CORE_TEMP, peak_core_temp, UNIT_CELSIUS);
+    ops->datum_float(DATUM_PEAK_CORE_VOLTAGE, peak_core_voltage, UNIT_VOLTS);
+    ops->datum_float(DATUM_AVG_CORE_VOLTAGE, total_core_voltage/sysinfo->enabled_cores_count, UNIT_VOLTS);
+    ops->datum_float(DATUM_AVG_CORE_C6, (total_core_CC6/sysinfo->enabled_cores_count)/100.f, UNIT_RATIO);
+    ops->datum_float(DATUM_TOTAL_CORE_POWER, total_core_power, UNIT_WATTS);
+    ops->end_group(GROUP_CORE_STATS_CALC);
 
-    fprintf(stdout, "╭── Core Statistics (Calculated) ───────────────┬────────────────────────────────────────────────╮\n");
-    print_line("Highest Effective Core Frequency", "%8.0f MHz", peak_core_frequency);
-    print_line("Highest Core Temperature", "%8.2f C", peak_core_temp);
-    print_line("Highest Core Voltage", "%8.3f V", peak_core_voltage);
-    print_line("Average Core Voltage", "%5.3f V", total_core_voltage/sysinfo->enabled_cores_count);
-    print_line("Average Core CC6", "%6.2f %%", total_core_CC6/sysinfo->enabled_cores_count);
-    print_line("Total Core Power Sum", "%7.3f W", total_core_power);
+    ops->begin_group(GROUP_CORE_STATS_SMU);
+    //SOCKET_POWER reported in GROUP_POWER
+    ops->datum_float(DATUM_PEAK_CORE_VOLTAGE_SMU, pmta(CPU_TELEMETRY_VOLTAGE), UNIT_VOLTS);
+    ops->datum_float(DATUM_PACKAGE_C6_SMU, pmta(PC6)/100.f, UNIT_RATIO);
+    ops->end_group(GROUP_CORE_STATS_SMU);
 
-    fprintf(stdout, "├── Reported by SMU ────────────────────────────┼────────────────────────────────────────────────┤\n");
-    //print_line("Package Power", "%8.3f W", pmta(SOCKET_POWER)); //Is listed below in power section
-    print_line("Peak Core Voltage", "%5.3f V", pmta(CPU_TELEMETRY_VOLTAGE));
-    if(pmt->PC6) print_line("Package CC6", "%6.2f %%", pmta(PC6));
-    fprintf(stdout, "╰───────────────────────────────────────────────┴────────────────────────────────────────────────╯\n");
+    ops->begin_group(GROUP_LIMITS);
+    ops->datum_float(DATUM_PEAK_TEMP, pmta(PEAK_TEMP), UNIT_CELSIUS);
+    if (pmt->SOC_TEMP) ops->datum_float(DATUM_SOC_TEMP, pmta(SOC_TEMP), UNIT_CELSIUS);
+    if (pmt->GFX_TEMP) ops->datum_float(DATUM_GFX_TEMP, pmta(GFX_TEMP), UNIT_CELSIUS);
 
-    fprintf(stdout, "╭── Electrical & Thermal Constraints ───────────┬────────────────────────────────────────────────╮\n");
     edc_value = pmta(EDC_VALUE) * (total_usage / sysinfo->cores / 100);
     if (edc_value < pmta(TDC_VALUE)) edc_value = pmta(TDC_VALUE);
 
-    print_line("Peak Temperature", "%8.2f C", pmta(PEAK_TEMP));
-    if(pmt->SOC_TEMP) print_line("SoC Temperature", "%8.2f C", pmta(SOC_TEMP));
-    if(pmt->GFX_TEMP) print_line("GFX Temperature", "%8.2f C", pmta(GFX_TEMP));
-    //print_line("Core Power", "%8.4f W", pmta(VDDCR_CPU_POWER));
+    ops->datum_limit(DATUM_CORE_VRM_VOLTAGE_LIMIT, pmta(VID_VALUE), pmta(VID_LIMIT), UNIT_VOLTS);
+    //STAPM_VALUE / STAPM_LIMIT not reported with no explanation
+    ops->datum_limit(DATUM_PPT_LIMIT, pmta(PPT_VALUE), pmta(PPT_LIMIT), UNIT_WATTS);
+    if (pmt->PPT_VALUE_APU) ops->datum_limit(DATUM_PPT_APU_LIMIT, pmta(PPT_VALUE_APU), pmta(PPT_LIMIT_APU), UNIT_WATTS);
+    ops->datum_limit(DATUM_TDC_LIMIT_NOMINAL, pmta(TDC_VALUE), pmta(TDC_LIMIT), UNIT_AMPS);
+    if (pmt->TDC_ACTUAL) ops->datum_limit(DATUM_TDC_LIMIT_ACTUAL, pmta(TDC_ACTUAL), pmta(TDC_LIMIT), UNIT_AMPS);
+    if (pmt->TDC_VALUE_SOC) ops->datum_limit(DATUM_TDC_SOC_LIMIT_NOMINAL, pmta(TDC_VALUE_SOC), pmta(TDC_LIMIT_SOC), UNIT_AMPS);
+    ops->datum_limit(DATUM_EDC_LIMIT, edc_value, pmta(EDC_LIMIT), UNIT_AMPS);
+    if (pmt->EDC_VALUE_SOC) ops->datum_limit(DATUM_EDC_SOC_LIMIT, pmta(EDC_VALUE_SOC), pmta(EDC_LIMIT_SOC), UNIT_AMPS);
+    ops->datum_limit(DATUM_THM_LIMIT, pmta(THM_VALUE), pmta(THM_LIMIT), UNIT_CELSIUS);
+    if (pmt->THM_VALUE_SOC) ops->datum_limit(DATUM_THM_SOC_LIMIT, pmta(THM_VALUE_SOC), pmta(THM_LIMIT_SOC), UNIT_CELSIUS);
+    if (pmt->THM_VALUE_GFX) ops->datum_limit(DATUM_THM_GFX_LIMIT, pmta(THM_VALUE_GFX), pmta(THM_LIMIT_GFX), UNIT_CELSIUS);
+    // STT_VALUE_APU / STT_LIMIT_APU always zero
+    // STT_VALUE_DGPU / STT_LIMIT_DGPU always zero
+    ops->datum_limit(DATUM_FIT_LIMIT, pmta(FIT_VALUE), pmta(FIT_LIMIT), UNIT_COUNT);
+    ops->end_group(GROUP_LIMITS);
 
-    print_line("Voltage from Core VRM", "%7.3f V | %7.3f V | %8.2f %%", pmta(VID_VALUE), pmta(VID_LIMIT), (pmta(VID_VALUE) / pmta(VID_LIMIT) * 100));
-    //if(pmt->STAPM_VALUE) print_line("STAPM", "%7.3f   | %7.f   | %8.2f %%", pmta(STAPM_VALUE), pmta(STAPM_LIMIT), (pmta(STAPM_VALUE) / pmta(STAPM_LIMIT) * 100));
-    print_line("PPT", "%7.3f W | %7.f W | %8.2f %%", pmta(PPT_VALUE), pmta(PPT_LIMIT), (pmta(PPT_VALUE) / pmta(PPT_LIMIT) * 100));
-    if(pmt->PPT_VALUE_APU) print_line("PPT APU", "%7.3f W | %7.f W | %8.2f %%", pmta(PPT_VALUE_APU), pmta(PPT_LIMIT_APU), (pmta(PPT_VALUE_APU) / pmta(PPT_LIMIT_APU) * 100));
-    print_line("TDC Value", "%7.3f A | %7.f A | %8.2f %%", pmta(TDC_VALUE), pmta(TDC_LIMIT), (pmta(TDC_VALUE) / pmta(TDC_LIMIT) * 100));
-    if(pmt->TDC_ACTUAL) print_line("TDC Actual", "%7.3f A | %7.f A | %8.2f %%", pmta(TDC_ACTUAL), pmta(TDC_LIMIT), (pmta(TDC_ACTUAL) / pmta(TDC_LIMIT) * 100));
-    if(pmt->TDC_VALUE_SOC) print_line("TDC Value, SoC only", "%7.3f A | %7.f A | %8.2f %%", pmta(TDC_VALUE_SOC), pmta(TDC_LIMIT_SOC), (pmta(TDC_VALUE_SOC) / pmta(TDC_LIMIT_SOC) * 100));
-    print_line("EDC", "%7.3f A | %7.f A | %8.2f %%", edc_value, pmta(EDC_LIMIT), (edc_value / pmta(EDC_LIMIT) * 100));
-    if(pmt->EDC_VALUE_SOC) print_line("EDC, SoC only", "%7.3f A | %7.f A | %8.2f %%", pmta(EDC_VALUE_SOC), pmta(EDC_LIMIT_SOC), (pmta(EDC_VALUE_SOC) / pmta(EDC_LIMIT_SOC) * 100));
-    print_line("THM", "%7.2f C | %7.f C | %8.2f %%", pmta(THM_VALUE), pmta(THM_LIMIT), (pmta(THM_VALUE) / pmta(THM_LIMIT) * 100));
-    if(pmt->THM_VALUE_SOC) print_line("THM SoC", "%7.2f C | %7.f C | %8.2f %%", pmta(THM_VALUE_SOC), pmta(THM_LIMIT_SOC), (pmta(THM_VALUE_SOC) / pmta(THM_LIMIT_SOC) * 100));
-    if(pmt->THM_VALUE_GFX) print_line("THM GFX", "%7.2f C | %7.f C | %8.2f %%", pmta(THM_VALUE_GFX), pmta(THM_LIMIT_GFX), (pmta(THM_VALUE_GFX) / pmta(THM_LIMIT_GFX) * 100));
-    //if(pmt->STT_LIMIT_APU) print_line("STT APU", "%7.2f   | %7.f   | %8.2f %%", pmta(STT_VALUE_APU), pmta(STT_LIMIT_APU), (pmta(STT_VALUE_APU) / pmta(STT_LIMIT_APU) * 100)); //Always zero
-    //if(pmt->STT_LIMIT_DGPU) print_line("STT DGPU", "%7.2f   | %7.f   | %8.2f %%", pmta(STT_VALUE_DGPU), pmta(STT_LIMIT_DGPU), (pmta(STT_VALUE_DGPU) / pmta(STT_LIMIT_DGPU) * 100)); //Always zero
-    print_line("FIT", "%7.f   | %7.f   | %8.2f %%", pmta(FIT_VALUE), pmta(FIT_LIMIT), (pmta(FIT_VALUE) / pmta(FIT_LIMIT)) * 100.f);
-    fprintf(stdout, "╰───────────────────────────────────────────────┴────────────────────────────────────────────────╯\n");
+    ops->begin_group(GROUP_MEMORY);
+    ops->datum_bool(DATUM_MEMORY_COUPLED, pmta(UCLK_FREQ) == pmta(MEMCLK_FREQ));
+    ops->datum_float(DATUM_FCLK_AVG, pmta(FCLK_FREQ_EFF), UNIT_MEGAHERTZ);
+    ops->datum_float(DATUM_FCLK, pmta(FCLK_FREQ), UNIT_MEGAHERTZ);
+    ops->datum_float(DATUM_UCLK, pmta(UCLK_FREQ), UNIT_MEGAHERTZ);
+    ops->datum_float(DATUM_MCLK, pmta(MEMCLK_FREQ), UNIT_MEGAHERTZ);
+    // VDDIO_MEM_POWER reported in GROUP_POWER
+    // SOC_SET_VOLTAGE might be the default voltage, not the actually set one
+    ops->datum_float(DATUM_VDDM, pmta(V_VDDM), UNIT_VOLTS);
+    ops->datum_float(DATUM_VDDP, pmta(V_VDDP), UNIT_VOLTS);
+    if (pmt->V_VDDG) ops->datum_float(DATUM_VDDG, pmta(V_VDDG), UNIT_VOLTS);
+    if (pmt->V_VDDG_IOD) ops->datum_float(DATUM_VDDG_IOD, pmta(V_VDDG_IOD), UNIT_VOLTS);
+    if (pmt->V_VDDG_CCD) ops->datum_float(DATUM_VDDG_CCD, pmta(V_VDDG_CCD), UNIT_VOLTS);
+    ops->end_group(GROUP_MEMORY);
 
-    fprintf(stdout, "╭── Memory Interface ───────────────────────────┬────────────────────────────────────────────────╮\n");
-    print_line("Coupled Mode", "%8s", pmta(UCLK_FREQ) == pmta(MEMCLK_FREQ) ? "ON" : "OFF");
-    print_line("Fabric Clock (Average)", "%5.f MHz", pmta(FCLK_FREQ_EFF));
-    print_line("Fabric Clock", "%5.f MHz", pmta(FCLK_FREQ));
-    print_line("Uncore Clock", "%5.f MHz", pmta(UCLK_FREQ));
-    print_line("Memory Clock", "%5.f MHz", pmta(MEMCLK_FREQ));
-    //print_line("VDDCR_Mem", "%7.3f W", pmta(VDDIO_MEM_POWER)); //Is listed below in power section
-    //print_line("VDDCR_SoC", "%7.3f V", pmta(SOC_SET_VOLTAGE)); //Might be the default voltage, not the actually set one
-    print_line("cLDO_VDDM", "%7.4f V", pmta(V_VDDM));
-    print_line("cLDO_VDDP", "%7.4f V", pmta(V_VDDP));
-    if(pmt->V_VDDG)     print_line("cLDO_VDDG", "%7.4f V", pmta(V_VDDG));
-    if(pmt->V_VDDG_IOD) print_line("cLDO_VDDG_IOD", "%7.4f V", pmta(V_VDDG_IOD));
-    if(pmt->V_VDDG_CCD) print_line("cLDO_VDDG_CCD", "%7.4f V", pmta(V_VDDG_CCD));
-    fprintf(stdout, "╰───────────────────────────────────────────────┴────────────────────────────────────────────────╯\n");
-
-    if(pmt->has_graphics){
-    fprintf(stdout, "╭── Graphics Subsystem──────────────────────────┬────────────────────────────────────────────────╮\n");
-    print_line("GFX Voltage | ROC Power", "%7.4f V | %8.3f W", pmta(GFX_VOLTAGE), pmta(ROC_POWER));
-    print_line("GFX Temperature", "%8.2f C", pmta(GFX_TEMP));
-    print_line("GFX Clock Real | Effective", "%5.f MHz | %6.f MHz", pmta(GFX_FREQ), pmta(GFX_FREQEFF));
-    print_line("GFX Busy", "%8.2f %%", pmta(GFX_BUSY) * 100.f);
-    print_line("GFX EDC Limit | Residency", "%7.3f A | %8.2f %%", pmta(GFX_EDC_LIM), pmta(GFX_EDC_RESIDENCY) * 100.f);
-    print_line("Display Count | FPS", "%2.f | %8.2f  ", pmta(DISPLAY_COUNT), pmta(FPS));
-    print_line("DGPU Power | Freq Target | Busy", "%7.3f W | %5.f MHz | %8.2f %%", pmta(DGPU_POWER), pmta(DGPU_FREQ_TARGET), pmta(DGPU_GFX_BUSY) * 100.f);
-    fprintf(stdout, "╰───────────────────────────────────────────────┴────────────────────────────────────────────────╯\n");
+    if (pmt->has_graphics) {
+        ops->begin_group(GROUP_GRAPHICS);
+        ops->datum_float2(DATUM_GFX_VOLTAGE_ROC_POWER, pmta(GFX_VOLTAGE), UNIT_VOLTS, pmta(ROC_POWER), UNIT_WATTS);
+        ops->datum_float(DATUM_GFX_TEMP, pmta(GFX_TEMP), UNIT_CELSIUS);
+        ops->datum_float2(DATUM_GFX_FREQ_REAL_EFF, pmta(GFX_FREQ), UNIT_MEGAHERTZ, pmta(GFX_FREQEFF), UNIT_MEGAHERTZ);
+        ops->datum_float(DATUM_GFX_BUSY, pmta(GFX_BUSY), UNIT_RATIO);
+        ops->datum_float2(DATUM_GFX_EDC_LIMIT_RESIDENCY, pmta(GFX_EDC_LIM), UNIT_AMPS, pmta(GFX_EDC_RESIDENCY), UNIT_RATIO);
+        ops->datum_float2(DATUM_GFX_DISPLAY_COUNT_FPS, pmta(DISPLAY_COUNT), UNIT_COUNT, pmta(FPS), UNIT_COUNT);
+        ops->datum_float3(DATUM_GFX_DGPU_POWER_FREQ_TARGET_BUSY, pmta(DGPU_POWER), UNIT_WATTS, pmta(DGPU_FREQ_TARGET), UNIT_MEGAHERTZ, pmta(DGPU_GFX_BUSY), UNIT_RATIO);
+        ops->end_group(GROUP_GRAPHICS);
     }
 
-    fprintf(stdout, "╭── Power Consumption ──────────────────────────┬────────────────────────────────────────────────╮\n");
+    ops->begin_group(GROUP_POWER);
     //These powers are drawn via VDDCR_SOC and VDDCR_CPU and thus are pulled from the CPU power connector of the mainboard
-    print_line("Total Core Power Sum", "%7.3f W", total_core_power);
-    //print_line("VDDCR_CPU Power", "%7.3f W", pmta(VDDCR_CPU_POWER)); //This value doesn't correlate with what the cores
-                                                                        //report, nor with what is actually consumed. but is
-                                                                        //the value HWiNFO shows.
-    print_line("VDDCR_SOC Power", "%7.3f W", pmta(VDDCR_SOC_POWER));
-    if(pmt->IO_VDDCR_SOC_POWER) print_line("IO VDDCR_SOC Power", "%7.3f W", pmta(IO_VDDCR_SOC_POWER));
-    if(pmt->GMI2_VDDG_POWER) print_line("GMI2_VDDG Power", "%7.3f W", pmta(GMI2_VDDG_POWER));
-    if(pmt->ROC_POWER) print_line("ROC Power", "%7.3f W", pmta(ROC_POWER));
+    ops->datum_float(DATUM_TOTAL_CORE_POWER, total_core_power, UNIT_WATTS);
+    // VDDCR_CPU_POWER doesn't correlate with what the cores report, nor with
+    // what is actually consumed, but is the value HWiNFO shows.  It is
+    // reported in GROUP_POWER_REPORTS.
+    ops->datum_float(DATUM_VDDR_SOC_POWER, pmta(VDDCR_SOC_POWER), UNIT_WATTS);
+    if (pmt->IO_VDDCR_SOC_POWER) ops->datum_float(DATUM_IO_VDDR_SOC_POWER, pmta(IO_VDDCR_SOC_POWER), UNIT_WATTS);
+    if (pmt->GMI2_VDDG_POWER) ops->datum_float(DATUM_GMI2_VDDG_POWER, pmta(GMI2_VDDG_POWER), UNIT_WATTS);
+    if (pmt->ROC_POWER) ops->datum_float(DATUM_ROC_POWER, pmta(ROC_POWER), UNIT_WATTS);
 
     //L3 caches (2 per CCD on Zen2, 1 per CCD on Zen3)
     l3_logic_power=0;
@@ -251,61 +226,36 @@ void draw_screen(pm_table *pmt, system_info *sysinfo) {
         l3_logic_power += pmta0(L3_LOGIC_POWER[i]);
         l3_vddm_power += pmta0(L3_VDDM_POWER[i]);
     }
-    if (pmt->max_l3 == 1) {
-        print_line("L3 Logic Power", "%7.3f W", pmta(L3_LOGIC_POWER[0]));
-        print_line("L3 VDDM Power", "%7.3f W", pmta(L3_VDDM_POWER[0]));
-    } else {
-        for (i=0; i<pmt->max_l3; i+=2) {
-            // + sign if needed and first value
-            j = snprintf(strbuf, sizeof(strbuf), "%s%7.3f W", (i?"+ ":""), pmta(L3_LOGIC_POWER[i]));
-            // second value if it exists
-            if (pmt->max_l3-i > 1) j += snprintf(strbuf+j, sizeof(strbuf)-j, " + %7.3f W", pmta(L3_LOGIC_POWER[i+1]));
-            // end of string (sum or nothing)
-            if (pmt->max_l3-i > 2) j += snprintf(strbuf+j, sizeof(strbuf)-j, "            ");
-            else j += snprintf(strbuf+j, sizeof(strbuf)-j, " = %7.3f W", l3_logic_power);
-            // print
-            print_line((i?"":"L3 Logic Power"), "%s", strbuf);
-        }
-        for (i=0; i<pmt->max_l3; i+=2) {
-            // + sign if needed and first value
-            j = snprintf(strbuf, sizeof(strbuf), "%s%7.3f W", (i?"+ ":""), pmta(L3_VDDM_POWER[i]));
-            // second value if it exists
-            if (pmt->max_l3-i > 1) j += snprintf(strbuf+j, sizeof(strbuf)-j, " + %7.3f W", pmta(L3_VDDM_POWER[i+1]));
-            // end of string (sum or nothing)
-            if (pmt->max_l3-i > 2) j += snprintf(strbuf+j, sizeof(strbuf)-j, "            ");
-            else j += snprintf(strbuf+j, sizeof(strbuf)-j, " = %7.3f W", l3_vddm_power);
-            // print
-            print_line((i?"":"L3 VDDM Power"), "%s", strbuf);
-        }
-    }
+    ops->datum_sum(DATUM_L3_LOGIC_POWER, pmt->L3_LOGIC_POWER[0], pmt->L3_LOGIC_POWER[0] + pmt->max_l3, UNIT_WATTS);
+    ops->datum_sum(DATUM_L3_VDDM_POWER, pmt->L3_VDDM_POWER[0], pmt->L3_VDDM_POWER[0] + pmt->max_l3, UNIT_WATTS);
 
     //These powers are supplied by other power lines to the CPU and are drawn from the 24 pin ATX connector on most boards
-    print_line("","");
-    print_line("VDDIO_MEM Power", "%7.3f W", pmta(VDDIO_MEM_POWER));
-    print_line("IOD_VDDIO_MEM Power", "%7.3f W", pmta(IOD_VDDIO_MEM_POWER));
-    if(pmt->DDR_VDDP_POWER) print_line("DDR_VDDP Power", "%7.3f W", pmta(DDR_VDDP_POWER));
-    if(pmt->DDR_PHY_POWER) print_line("DDR Phy Power", "%7.3f W", pmta(DDR_PHY_POWER));
-    print_line("VDD18 Power", "%7.3f W", pmta(VDD18_POWER)); //Same as pmta(IO_VDD18_POWER)
-    if(pmt->IO_DISPLAY_POWER) print_line("CPU Display IO Power", "%7.3f W", pmta(IO_DISPLAY_POWER));
-    if(pmt->IO_USB_POWER) print_line("CPU USB IO Power", "%7.3f W", pmta(IO_USB_POWER));
+    ops->datum_float(DATUM_VDDIO_MEM_POWER, pmta(VDDIO_MEM_POWER), UNIT_WATTS);
+    ops->datum_float(DATUM_IOD_VDDIO_MEM_POWER, pmta(IOD_VDDIO_MEM_POWER), UNIT_WATTS);
+    if (pmt->DDR_VDDP_POWER) ops->datum_float(DATUM_DDR_VDDP_POWER, pmta(DDR_VDDP_POWER), UNIT_WATTS);
+    if (pmt->DDR_PHY_POWER) ops->datum_float(DATUM_DDR_PHY_POWER, pmta(DDR_PHY_POWER), UNIT_WATTS);
+    ops->datum_float(DATUM_VDD18_POWER, pmta(VDD18_POWER), UNIT_WATTS); //Same as pmta(IO_VDD18_POWER)
+    if (pmt->IO_DISPLAY_POWER) ops->datum_float(DATUM_IO_DISPLAY_POWER, pmta(IO_DISPLAY_POWER), UNIT_WATTS);
+    if (pmt->IO_USB_POWER) ops->datum_float(DATUM_IO_USB_POWER, pmta(IO_USB_POWER), UNIT_WATTS);
 
-    if(!pmt->powersum_unclear) {
-    //The sum is the thermal output of the whole package. Yes, this is higher than PPT and SOCKET_POWER.
-    //Confirmed by measuring the actual current draw on the mainboard.
-    print_line("","");
-    print_line("Calculated Thermal Output", "%7.3f W", total_core_power + pmta0(VDDCR_SOC_POWER) + pmta0(GMI2_VDDG_POWER) 
-            + l3_logic_power + l3_vddm_power
-            + pmta0(VDDIO_MEM_POWER) + pmta0(IOD_VDDIO_MEM_POWER) + pmta0(DDR_VDDP_POWER) + pmta0(VDD18_POWER));
-    }
+    if (!pmt->powersum_unclear)
+        //The sum is the thermal output of the whole package. Yes, this is higher than PPT and SOCKET_POWER.
+        //Confirmed by measuring the actual current draw on the mainboard.
+        ops->datum_float(DATUM_CALC_TOTAL_POWER, total_core_power + pmta0(VDDCR_SOC_POWER) + pmta0(GMI2_VDDG_POWER)
+                + l3_logic_power + l3_vddm_power
+                + pmta0(VDDIO_MEM_POWER) + pmta0(IOD_VDDIO_MEM_POWER) + pmta0(DDR_VDDP_POWER) + pmta0(VDD18_POWER), UNIT_WATTS);
+    ops->end_group(GROUP_POWER);
 
-    fprintf(stdout, "├── Additional Reports ─────────────────────────┼────────────────────────────────────────────────┤\n");
-    //print_line("ROC_POWER", "%7.4f",pmta(ROC_POWER));
-    print_line("SoC Power (SVI2)", "%8.3f V | %7.3f A | %8.3f W", pmta(SOC_TELEMETRY_VOLTAGE), pmta(SOC_TELEMETRY_CURRENT), pmta(SOC_TELEMETRY_POWER));
-    print_line("Core Power (SVI2)", "%8.3f V | %7.3f A | %8.3f W", pmta(CPU_TELEMETRY_VOLTAGE), pmta(CPU_TELEMETRY_CURRENT), pmta(CPU_TELEMETRY_POWER));
-    print_line("Core Power (SMU)", "%7.3f W", pmta(VDDCR_CPU_POWER));
-    print_line("Socket Power (SMU)", "%7.3f W", pmta(SOCKET_POWER));
-    if (pmt->PACKAGE_POWER) print_line("Package Power (SMU)", "%7.3f W", pmta(PACKAGE_POWER));
-    fprintf(stdout, "╰───────────────────────────────────────────────┴────────────────────────────────────────────────╯\n");
+    ops->begin_group(GROUP_POWER_REPORTS);
+    //ROC_POWER reported in GROUP_GRAPHICS and GROUP_POWER
+    ops->datum_float3(DATUM_SVI2_SOC_POWER, pmta(SOC_TELEMETRY_VOLTAGE), UNIT_VOLTS, pmta(SOC_TELEMETRY_CURRENT), UNIT_AMPS, pmta(SOC_TELEMETRY_POWER), UNIT_WATTS);
+    ops->datum_float3(DATUM_SVI2_CORE_POWER, pmta(CPU_TELEMETRY_VOLTAGE), UNIT_VOLTS, pmta(CPU_TELEMETRY_CURRENT), UNIT_AMPS, pmta(CPU_TELEMETRY_POWER), UNIT_WATTS);
+    ops->datum_float(DATUM_SMU_CORE_POWER, pmta(VDDCR_CPU_POWER), UNIT_WATTS);
+    ops->datum_float(DATUM_SMU_SOCKET_POWER, pmta(SOCKET_POWER), UNIT_WATTS);
+    if (pmt->PACKAGE_POWER) ops->datum_float(DATUM_SMU_PACKAGE_POWER, pmta(PACKAGE_POWER), UNIT_WATTS);
+    ops->end_group(GROUP_POWER_REPORTS);
+
+    ops->end();
 }
 
 int select_pm_table_version(unsigned int version, pm_table *pmt, unsigned char *pm_buf) {
@@ -361,7 +311,23 @@ void disabled_cores_0x400005(pm_table *pmt, system_info *sysinfo) {
     }
 }
 
-void start_pm_monitor(unsigned int force) {
+static sig_atomic_t stop_requested = 0;
+void signal_interrupt(int sig) {
+    switch (sig) {
+        case SIGINT:
+        case SIGTERM:
+            if (stop_requested)
+                // We got stuck cleaning up and the user sent another signal.
+                // Exit now without cleaning up.
+                _exit(1);
+            stop_requested = 1;
+            break;
+        default:
+            break;
+    }
+}
+
+void start_pm_monitor(unsigned int force, int repeating, const struct output_ops* ops) {
     unsigned char *pm_buf;
     pm_table pmt;
     system_info sysinfo;
@@ -418,20 +384,21 @@ void start_pm_monitor(unsigned int force) {
         default:            sysinfo.if_ver =  0; break;
     }
 
-    while(1) {
+    ops->init(repeating, isatty(fileno(stdout)));
+
+    do {
         if (smu_read_pm_table(&obj, pm_buf, obj.pm_table_size) != SMU_Return_OK)
             continue;
 
-        fprintf(stdout, "\e[1;1H\e[2J"); //Move cursor to (1,1); Clear entire screen
-        draw_screen(&pmt, &sysinfo);
-        fprintf(stdout, "\e[?25l"); // Hide Cursor
-        fflush(stdout);
+        draw_screen(&pmt, &sysinfo, ops);
 
-        sleep(update_time_s);
-    }
+        nanosleep(&update_time_s, NULL);
+    } while (repeating && !stop_requested);
+
+    ops->cleanup();
 }
 
-void read_from_dumpfile(char *dumpfile, unsigned int version) {
+void read_from_dumpfile(char *dumpfile, unsigned int version, const struct output_ops* ops) {
     unsigned char readbuf[10240];
     unsigned int bytes_read;
     pm_table pmt;
@@ -470,7 +437,9 @@ void read_from_dumpfile(char *dumpfile, unsigned int version) {
     sysinfo.core_disable_map=0;
     sysinfo.cores=sysinfo.enabled_cores_count;
 
-    draw_screen(&pmt, &sysinfo);
+    ops->init(0, isatty(fileno(stdout)));
+    draw_screen(&pmt, &sysinfo, ops);
+    ops->cleanup();
 }
 
 void print_version() {
@@ -492,38 +461,39 @@ void show_help(char* program) {
             "\t-u<seconds>   - Update the monitoring only after this number of second(s) have passed. Defaults to 1.\n"
             "\t-f<hex-value> - Force to use a specific PM table version.\n"
             "\t-t<filename>  - Test mode. Read PM Table from raw-dumfile. Use in conjunction with -f\n",
+            "\t-o<format>    - Output format (boxdrawing, json, ndjson)\n",
+            "\t-1            - Print once and exit\n",
         program
     );
 }
 
-void signal_interrupt(int sig) {
-    switch (sig) {
-        case SIGINT:
-        case SIGABRT:
-        case SIGTERM:
-            // Re-enable the cursor.
-            fprintf(stdout, "\e[?25h");
-            exit(0);
-        default:
-            break;
-    }
+struct timespec parse_fractional_time(const char* s) {
+    // In "3.14", the "3" represents 3 seconds, but the "14" represents
+    // 140000000 nanoseconds -- it's a "left-justified" number.  Deal with that
+    // by writing the fractional part to the front of a buffer of "0" and then
+    // scanning that buffer.
+    struct timespec t;
+    char fract[] = "000000000";
+    sscanf(s, "%ld.%9c", &t.tv_sec, fract);
+    t.tv_nsec = atol(fract);
+    return t;
 }
 
 int main(int argc, char** argv) {
     smu_return_val ret;
-    int c=0, force=0, core=0, printtimings=0;
+    int c=0, force=0, core=0, printtimings=0, repeating=1;
     char *dumpfile=0;
+    const struct output_ops* ops = &box_drawing_ops;
 
     //Set up signal handlers
-    if ((signal(SIGABRT, signal_interrupt) == SIG_ERR) ||
-        (signal(SIGTERM, signal_interrupt) == SIG_ERR) ||
+    if ((signal(SIGTERM, signal_interrupt) == SIG_ERR) ||
         (signal(SIGINT, signal_interrupt) == SIG_ERR)) {
         fprintf(stderr, "Can't set up signal hooks.\n");
         exit(-1);
     }
 
     //Parse arguments
-    while ((c = getopt(argc, argv, "vmd::f:t:u:h")) != -1) {
+    while ((c = getopt(argc, argv, "vmd::f:t:u:o:1h")) != -1) {
         switch (c) {
             case 'v':
                 print_version();
@@ -550,8 +520,24 @@ int main(int argc, char** argv) {
                 }
                 dumpfile=optarg;
                 break;
+            case 'o':
+                if (!optarg) optarg = "";
+                if (!strcmp(optarg, "boxdrawing") || !strcmp(optarg, "box-drawing"))
+                    ops = &box_drawing_ops;
+                else if (!strcmp(optarg, "json"))
+                    ops = &json_ops;
+                else if (!strcmp(optarg, "ndjson"))
+                    ops = &ndjson_ops;
+                else {
+                    show_help(argv[0]);
+                    exit(0);
+                }
+                break;
+            case '1':
+                repeating = 0;
+                break;
             case 'u':
-                update_time_s = atoi(optarg);
+                update_time_s = parse_fractional_time(optarg);
                 break;
             case 'h':
                 show_help(argv[0]);
@@ -563,8 +549,11 @@ int main(int argc, char** argv) {
         }
     }
 
+    if (!repeating)
+        update_time_s.tv_sec = update_time_s.tv_nsec = 0;
+
     if(dumpfile && !printtimings)
-        read_from_dumpfile(dumpfile, force);
+        read_from_dumpfile(dumpfile, force, ops);
     else
     {
         if (getuid() != 0 && geteuid() != 0) {
@@ -579,7 +568,7 @@ int main(int argc, char** argv) {
         }
 
         if(printtimings) print_memory_timings();
-        else start_pm_monitor(force);
+        else start_pm_monitor(force, repeating, ops);
     }
 
     return 0;
